@@ -1,0 +1,13 @@
+{
+  "project": "중고차 수출 ERP (Totaload ERP)",
+  "phase": "0-mvp",
+  "steps": [
+    { "step": 0, "name": "project-setup", "status": "pending" },
+    { "step": 1, "name": "db-schema", "status": "pending" },
+    { "step": 2, "name": "ocr-service", "status": "pending" },
+    { "step": 3, "name": "backend-api", "status": "pending" },
+    { "step": 4, "name": "frontend", "status": "pending" },
+    { "step": 5, "name": "deploy", "status": "pending" },
+    { "step": 6, "name": "polish-and-verify", "status": "pending" }
+  ]
+}
