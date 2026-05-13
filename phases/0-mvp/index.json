@@ -56,7 +56,7 @@
       "status": "completed",
       "started_at": "2026-05-13T09:53:14+0900",
       "summary": "검증·문서 마무리 (앱 코드 거의 안 건드림). 자동 AC 전부 통과: `npm run lint && npm run build && npm run test` clean (frontend vitest 11 / backend health 1 pass, api 11+migrate 1 은 DATABASE_URL 없어 skip — 이전 step 에서 local postgres 로 통과 확인됨), `cd ocr-service && python3 -m pytest -q` 15 pass. Docker 이 환경에 없음 → `docker compose up --build` 기반 S1~S5·에러 표본·UX 표본 수동 동선은 코드 위치 점검(docs/CHECKLIST.md)으로 갈음 — step 0~5 산출물에 local(postgres+backend+ocr) 구동 시 동선 통과 기록 있음. 신규: docs/CHECKLIST.md — ARCHITECTURE §2.8 카탈로그(업로드·OCR/codex·PDF·DB·검색·파일서빙·배포/운영·UX) 전 항목을 처리 파일/함수에 매핑한 표 + 자동검증 요약. 보강(최소): backend/src/index.ts — DATABASE_URL/OCR_SERVICE_URL 미설정 시 변수명 명시 console.warn (§2.8 '환경변수 누락 → 부팅 시 명확 로그'). 그 외 §2.8 항목은 전부 기존 코드에서 이미 처리됨(누락 없음). README.md — '한계 (Known limitations)' 절 추가(로그인 없음·OCR 비결정성·PDF 1페이지·동기 OCR·동시편집 LWW·로컬디스크·MVP 제외목록·모바일 best-effort·DELETE 미구현). docs/ADR.md — 하단 '향후 과제' 절 추가(인증/권한, SSN 컬럼 암호화, OCR 비동기 잡큐, S3 전환, 백업, 검토후보). Stop 훅 커맨드(`npm run lint && npm run build && npm run test`) 통과 확인.",
-      "completed_at": "2026-05-13T10:05:00+0900"
+      "completed_at": "2026-05-13T09:57:44+0900"
     }
   ],
   "created_at": "2026-05-13T08:53:00+0900"
