@@ -152,12 +152,46 @@ def _to_int(v, warnings, key):
     return int(digits)
 
 
+# Korean vehicle certs often print "[address] [company-name]" on a single "소유자" line.
+# LLMs that see that line (especially after Upstage Document Parse) tend to put the whole
+# string into owner_name. This splits it on the corporate prefix when the preceding text
+# looks like an address.
+_COMPANY_TAG_RE = re.compile(r"(\(주\)|\(유\)|\(재\)|\(사\)|주식회사\s*|유한회사\s*)")
+_ADDRESS_HINT_RE = re.compile(r"(특별시|광역시|특별자치도|특별자치시|도\s|시\s|구\s|읍\s|면\s|동\s|리\s|로\s|길|번지|번길)")
+
+
+def _split_name_from_address(name: Optional[str]):
+    """If `name` is shaped like `[address] [company-tagged name]`, return (company, address).
+    Otherwise return (name, None) — caller can keep using `name` as-is."""
+    if not name:
+        return name, None
+    m = _COMPANY_TAG_RE.search(name)
+    if not m or m.start() == 0:
+        return name, None
+    prefix = name[: m.start()].strip()
+    suffix = name[m.start():].strip()
+    if not prefix or not _ADDRESS_HINT_RE.search(prefix):
+        return name, None
+    return suffix, prefix
+
+
 def _parse_and_normalize(obj: dict, raw: str) -> ExtractResponse:
     warnings: list[str] = []
     fields = ExtractedFields()
     fields.owner_name = _norm_str(obj.get("owner_name"))
     fields.owner_ssn = _norm_str(obj.get("owner_ssn"))
     fields.owner_address = _norm_address(obj.get("owner_address"))
+
+    # Defensive split: if owner_name contains "[address] [company]" (common when the
+    # cert prints both on one row), pull the company out and fill owner_address with
+    # the leading address part if it isn't already set.
+    if fields.owner_name:
+        split_name, split_addr = _split_name_from_address(fields.owner_name)
+        if split_addr:
+            fields.owner_name = split_name
+            warnings.append("owner_name 에서 주소를 분리했습니다")
+            if not fields.owner_address:
+                fields.owner_address = _norm_address(split_addr)
     fields.vehicle_reg_no = _norm_reg_no(obj.get("vehicle_reg_no"))
     fields.vehicle_vin = _norm_vin(obj.get("vehicle_vin"))
     if fields.vehicle_vin and len(fields.vehicle_vin) != 17:

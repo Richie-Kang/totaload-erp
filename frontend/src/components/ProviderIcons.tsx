@@ -4,50 +4,14 @@
 // - Gemini: Google Gemini 4-point spark with the Google rainbow
 
 export function UpstageIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  // Upstage mark — an asymmetric italic diamond / star: 11 horizontal parallelograms
-  // that taper to a sharp tip at the top-right and a sharp tip at the bottom-left,
-  // bulging to full width in the middle. Each bar is italic (top shifted right of
-  // bottom). The earlier version had blunt tips because the outermost bars were too
-  // wide; this version starts and ends with very short bars (8px in a 100-unit view).
-  const h = 5;   // bar height
-  const g = 2;   // gap between bars
-  const s = 7;   // italic slant (top shifted right of bottom)
-  // widths build up to the widest bar, then taper back. Tips are intentionally short.
-  // [x_left, x_right] for each row, top to bottom.
-  const lanes: [number, number][] = [
-    [76, 84],   // 0: top-right tip (width 8)
-    [68, 86],   // 1: width 18
-    [56, 90],   // 2: width 34
-    [40, 92],   // 3: width 52
-    [10, 92],   // 4: width 82
-    [6, 90],    // 5: width 84 (widest)
-    [8, 88],    // 6: width 80
-    [10, 58],   // 7: width 48 (taper begins)
-    [12, 40],   // 8: width 28
-    [14, 30],   // 9: width 16
-    [16, 24],   // 10: bottom-left tip (width 8)
-  ];
-  const top0 = 100 / 2 - (lanes.length * (h + g) - g) / 2; // vertical center
   return (
-    <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
-      <defs>
-        <linearGradient id="up-grad" x1="20%" y1="0%" x2="80%" y2="100%">
-          <stop offset="0%" stopColor="#9C8EF7" />
-          <stop offset="100%" stopColor="#6A38E2" />
-        </linearGradient>
-      </defs>
-      <g fill="url(#up-grad)">
-        {lanes.map(([xl, xr], i) => {
-          const yt = top0 + i * (h + g);
-          return (
-            <path
-              key={i}
-              d={`M ${xl} ${yt + h} L ${xr} ${yt + h} L ${xr + s} ${yt} L ${xl + s} ${yt} Z`}
-            />
-          );
-        })}
-      </g>
-    </svg>
+    <img
+      src="/upstage-logo.png"
+      alt="Upstage"
+      className={className}
+      style={{ objectFit: 'contain' }}
+      aria-hidden="true"
+    />
   );
 }
 

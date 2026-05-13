@@ -152,6 +152,46 @@ def test_normalize_bad_number_warns(monkeypatch):
     assert any("vehicle_mileage" in w for w in r.warnings)
 
 
+def test_owner_name_splits_address_and_company(monkeypatch):
+    """LLM puts '[address] [company]' into owner_name → post-processing splits it."""
+    _mock_codex(
+        monkeypatch,
+        lambda p: _full_json(
+            owner_name="경기도 이천시 장호원읍 경충대로718번길 53 (주)카비드 이천지점(상품용)",
+            owner_address=None,
+        ),
+    )
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
+    assert r.fields.owner_name == "(주)카비드 이천지점(상품용)"
+    assert r.fields.owner_address == "경기도 이천시 장호원읍 경충대로718번길 53"
+    assert any("주소를 분리" in w for w in r.warnings)
+
+
+def test_owner_name_leaves_clean_company_alone(monkeypatch):
+    """Already-clean owner_name (no address prefix) is untouched."""
+    _mock_codex(monkeypatch, lambda p: _full_json(owner_name="(주)카비드 이천지점"))
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
+    assert r.fields.owner_name == "(주)카비드 이천지점"
+    # personal name with no company tag is also untouched
+    _mock_codex(monkeypatch, lambda p: _full_json(owner_name="홍길동"))
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
+    assert r.fields.owner_name == "홍길동"
+
+
+def test_owner_name_split_preserves_existing_address(monkeypatch):
+    """If owner_address already has a value, splitting owner_name keeps the existing one."""
+    _mock_codex(
+        monkeypatch,
+        lambda p: _full_json(
+            owner_name="서울특별시 강남구 테헤란로 1 주식회사 어쩌고",
+            owner_address="실제주소가 따로 있음",
+        ),
+    )
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
+    assert r.fields.owner_name.startswith("주식회사")
+    assert r.fields.owner_address == "실제주소가 따로 있음"
+
+
 # --- extract entrypoint ----------------------------------------------------
 
 def test_extract_bad_image():
