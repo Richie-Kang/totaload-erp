@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OCR Provider Comparison — Totaload OCR</title>
+  <link rel="stylesheet" as="style" crossorigin
+        href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <style>
+    :root {
+      --violet-50:  #f5f3ff;
+      --violet-100: #ede9fe;
+      --violet-200: #ddd6fe;
+      --violet-300: #c4b5fd;
+      --violet-500: #8b5cf6;
+      --violet-600: #7c3aed;
+      --violet-700: #6d28d9;
+      --violet-900: #4c1d95;
+      --slate-900: #0f172a;
+      --slate-700: #334155;
+      --slate-600: #475569;
+      --slate-500: #64748b;
+      --slate-400: #94a3b8;
+      --slate-200: #e2e8f0;
+      --emerald:   #059669;
+      --amber:     #d97706;
+      --rose:      #e11d48;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    html { font-size: 17px; }
+    body {
+      font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+                   system-ui, sans-serif;
+      color: var(--slate-900);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      background:
+        radial-gradient(1100px 700px at 12% -10%, var(--violet-100) 0%, transparent 60%),
+        radial-gradient(900px 700px at 100% 0%, #ffe4e6 0%, transparent 55%),
+        radial-gradient(900px 800px at 90% 100%, #dbeafe 0%, transparent 60%),
+        linear-gradient(180deg, #faf7ff 0%, #fdf6f8 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+    }
+    .page { max-width: 1240px; margin: 0 auto; padding: 56px 32px 80px; }
+    .glass {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 0 12px 40px -12px rgba(91, 33, 182, 0.18),
+                  0 1px 0 rgba(255, 255, 255, 0.6) inset;
+      border-radius: 24px;
+    }
+
+    /* hero */
+    .hero { margin-bottom: 36px; }
+    .eyebrow {
+      display: inline-block;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: var(--violet-100);
+      color: var(--violet-700);
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    h1 {
+      font-size: 2.4rem;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin: 18px 0 14px;
+      color: var(--slate-900);
+    }
+    h1 .accent { color: var(--violet-600); }
+    .lede {
+      font-size: 1.15rem;
+      color: var(--slate-600);
+      max-width: 820px;
+      margin: 0;
+    }
+    .meta {
+      display: flex; flex-wrap: wrap; gap: 18px 28px;
+      margin-top: 24px;
+      color: var(--slate-500);
+      font-size: 0.92rem;
+    }
+    .meta a { color: var(--violet-700); text-decoration: none; }
+    .meta a:hover { text-decoration: underline; }
+
+    /* provider header row above the table */
+    .providers {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .col-label { padding: 0 4px; }
+    .col-label .tag { font-size: 0.75rem; color: var(--slate-500); text-transform: uppercase; letter-spacing: 0.08em; }
+    .provider {
+      padding: 18px 20px;
+      display: flex; align-items: center; gap: 12px;
+      border-radius: 16px;
+    }
+    .provider .name { font-weight: 700; font-size: 1.1rem; }
+    .provider .sub  { font-size: 0.82rem; color: var(--slate-500); }
+    .provider.primary {
+      background: linear-gradient(135deg, var(--violet-600), var(--violet-700));
+      color: white;
+      box-shadow: 0 10px 30px -10px rgba(124, 58, 237, 0.55);
+    }
+    .provider.primary .sub { color: rgba(255, 255, 255, 0.85); }
+    .provider.secondary { background: rgba(255, 255, 255, 0.7); }
+
+    /* table */
+    .table { margin-top: 8px; }
+    .row {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr 1fr 1fr;
+      gap: 16px;
+      padding: 16px 20px;
+      align-items: center;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .row:last-child { border-bottom: none; }
+    .row .dim {
+      font-weight: 600;
+      color: var(--slate-900);
+      font-size: 1rem;
+    }
+    .row .dim .sub {
+      display: block;
+      font-weight: 400;
+      font-size: 0.82rem;
+      color: var(--slate-500);
+      margin-top: 2px;
+    }
+    .cell {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 0.95rem;
+      color: var(--slate-700);
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.55);
+      min-height: 64px;
+    }
+    .cell .text { flex: 1; }
+    .cell.win   { background: rgba(16, 185, 129, 0.08); }
+    .cell.win .badge { color: var(--emerald); }
+    .cell.meh   { background: rgba(217, 119, 6, 0.08); }
+    .cell.meh .badge { color: var(--amber); }
+    .cell.bad   { background: rgba(225, 29, 72, 0.08); }
+    .cell.bad .badge { color: var(--rose); }
+    .badge {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.95rem;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.9);
+      margin-top: 1px;
+    }
+
+    /* takeaways */
+    .takeaways {
+      margin-top: 36px;
+      padding: 32px;
+    }
+    .takeaways h2 {
+      font-size: 1.5rem;
+      letter-spacing: -0.01em;
+      margin: 0 0 16px;
+    }
+    .takeaways .list { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .takeaway {
+      padding: 18px 20px;
+      background: rgba(255, 255, 255, 0.75);
+      border-radius: 14px;
+      border-left: 4px solid var(--violet-500);
+    }
+    .takeaway .title {
+      font-weight: 700;
+      color: var(--violet-700);
+      margin-bottom: 4px;
+      font-size: 1rem;
+    }
+    .takeaway p {
+      margin: 0;
+      color: var(--slate-700);
+      font-size: 0.94rem;
+    }
+
+    /* footer */
+    footer {
+      margin-top: 32px;
+      text-align: center;
+      color: var(--slate-500);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--violet-700); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* provider mark inline SVGs */
+    .mark { width: 28px; height: 28px; flex-shrink: 0; }
+    .mark.sm { width: 22px; height: 22px; }
+
+    @media (max-width: 900px) {
+      .providers, .row { grid-template-columns: 1fr; }
+      .col-label { display: none; }
+      .row .dim { font-size: 1.05rem; }
+      .takeaways .list { grid-template-columns: 1fr; }
+      h1 { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+
+    <header class="hero glass" style="padding: 36px 36px 32px;">
+      <span class="eyebrow">OCR Provider Comparison · 2026</span>
+      <h1>Picking the right OCR for <span class="accent">Korean enterprise documents</span>.</h1>
+      <p class="lede">
+        We routed the same Korean vehicle registration certificate through three OCR backends —
+        Upstage Document Parse + Solar Chat, OpenAI Codex (CLI vision), and Google Gemini 2.5 Flash —
+        from inside one production web app. Same image, same downstream PDF, same prompt. Here is what
+        we found across the four dimensions an enterprise customer actually has to defend.
+      </p>
+      <div class="meta">
+        <span>👤 <strong>Customer</strong> · Korean used-car exporter, ~30 certs/day, on-desk workflow</span>
+        <span>📄 <strong>Document</strong> · 자동차등록증 (vehicle registration certificate)</span>
+        <span>🔗 <strong>Live demo</strong> · <a href="https://totaload-frontend.onrender.com">totaload-frontend.onrender.com</a></span>
+      </div>
+    </header>
+
+    <!-- provider header row -->
+    <div class="providers">
+      <div class="col-label">
+        <div class="tag">Dimension</div>
+      </div>
+      <div class="provider primary glass">
+        <!-- Upstage mark: simplified staircase -->
+        <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+          <g fill="white">
+            <path d="M76 33 L84 33 L84 38 L83 38 Z" /><path d="M68 41 L86 41 L86 46 L73 46 Z" />
+            <path d="M56 49 L90 49 L90 54 L61 54 Z" /><path d="M40 57 L92 57 L92 62 L45 62 Z" />
+            <path d="M10 57 L92 57 L92 62 L15 62 Z" /><path d="M6 65 L90 65 L90 70 L11 70 Z" />
+            <path d="M8 73 L88 73 L88 78 L13 78 Z" /><path d="M10 81 L58 81 L58 86 L15 86 Z" />
+            <path d="M12 89 L40 89 L40 94 L17 94 Z" />
+          </g>
+        </svg>
+        <div>
+          <div class="name">Upstage</div>
+          <div class="sub">Document Parse + Solar</div>
+        </div>
+      </div>
+      <div class="provider secondary glass">
+        <!-- Codex cloud -->
+        <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
+          <defs><linearGradient id="codex-cloud" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#B5BBFC"/><stop offset="100%" stop-color="#5B6EF5"/>
+          </linearGradient></defs>
+          <g fill="url(#codex-cloud)">
+            <circle cx="32" cy="14" r="11"/><circle cx="49" cy="22" r="11"/>
+            <circle cx="54" cy="38" r="11"/><circle cx="44" cy="52" r="11"/>
+            <circle cx="24" cy="54" r="11"/><circle cx="10" cy="44" r="11"/>
+            <circle cx="10" cy="26" r="11"/><circle cx="32" cy="34" r="22"/>
+          </g>
+          <path d="M22 26 L31 34 L22 42" stroke="white" stroke-width="5"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M34 42 L46 42" stroke="white" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+        <div>
+          <div class="name">OpenAI Codex</div>
+          <div class="sub">CLI vision (GPT-5 family)</div>
+        </div>
+      </div>
+      <div class="provider secondary glass">
+        <!-- Gemini 4-point spark -->
+        <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+          <defs><linearGradient id="gem-rb" x1="15%" y1="0%" x2="85%" y2="100%">
+            <stop offset="0%" stop-color="#EA4335"/><stop offset="38%" stop-color="#FBBC04"/>
+            <stop offset="68%" stop-color="#34A853"/><stop offset="100%" stop-color="#4285F4"/>
+          </linearGradient></defs>
+          <path d="M12 1.5 C 12 7.5, 12.6 11.4, 22.5 12 C 12.6 12.6, 12 16.5, 12 22.5
+                   C 12 16.5, 11.4 12.6, 1.5 12 C 11.4 11.4, 12 7.5, 12 1.5 Z"
+                fill="url(#gem-rb)"/>
+        </svg>
+        <div>
+          <div class="name">Google Gemini</div>
+          <div class="sub">2.5 Flash (multimodal)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- comparison table -->
+    <section class="table glass" style="padding: 6px 6px;">
+      <div class="row">
+        <div class="dim">
+          Reliability
+          <span class="sub">deterministic JSON, no surprises</span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            <strong>Deterministic.</strong> Document Parse preserves layout; Solar Chat in
+            <code>response_format: json_object</code> mode never wraps in fences or chatter.
+            Same image returns identical fields run-to-run.
+          </span>
+        </div>
+        <div class="cell meh">
+          <span class="badge">~</span>
+          <span class="text">
+            Non-deterministic LLM output. Occasional hallucinated fields. CLI subprocess
+            adds an extra failure surface (exit-code edge cases).
+          </span>
+        </div>
+        <div class="cell meh">
+          <span class="badge">~</span>
+          <span class="text">
+            JSON-mode generally clean, but <em>safety filters block PII-heavy documents</em>
+            by default — requires explicit <code>BLOCK_NONE</code> override per category.
+          </span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="dim">
+          Speed
+          <span class="sub">per-certificate, warm container</span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            <strong>~3.5 s</strong> end-to-end (two REST calls). Inside operator threshold
+            of "feels live."
+          </span>
+        </div>
+        <div class="cell bad">
+          <span class="badge">✗</span>
+          <span class="text">
+            <strong>25–60 s</strong>. Subprocess + LLM thinking time dominates. Not
+            usable for a desk-typing workflow.
+          </span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            <strong>~2.5 s</strong>, single multimodal call. Fastest of the three when
+            safety overrides are in place.
+          </span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="dim">
+          Accuracy
+          <span class="sub">Korean form-field extraction</span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            Document Parse is <strong>trained on Korean documents</strong>. Field labels
+            (자동차등록번호, 차대번호, 차량총중량) are recognized natively. Address ↔ name
+            split handled by combined layout + schema prompt.
+          </span>
+        </div>
+        <div class="cell meh">
+          <span class="badge">~</span>
+          <span class="text">
+            Strong generic vision; quality depends on the LLM's mood. Required defensive
+            post-processing for the "address + company on one row" failure pattern.
+          </span>
+        </div>
+        <div class="cell meh">
+          <span class="badge">~</span>
+          <span class="text">
+            Strong vision but generic prompting. Same address/name failure as Codex
+            without provider-side spatial info. Korean address parsing weaker than Upstage.
+          </span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="dim">
+          Compliance & PII
+          <span class="sub">Korean resident-registration numbers, addresses</span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            Production-grade Korean-DPA-aware tooling. No safety-filter ambiguity —
+            customer controls PII handling end-to-end.
+          </span>
+        </div>
+        <div class="cell meh">
+          <span class="badge">~</span>
+          <span class="text">
+            Authenticated via personal <code>auth.json</code> mounted into a server
+            container. Acceptable for prototypes; awkward in production.
+          </span>
+        </div>
+        <div class="cell bad">
+          <span class="badge">✗</span>
+          <span class="text">
+            Default safety filters block Korean certs (PII heuristics fire on
+            resident-registration number + address). <code>BLOCK_NONE</code> override
+            is a hard sell to a compliance team.
+          </span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="dim">
+          Integration friction
+          <span class="sub">first deploy → first extraction</span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            One env var: <code>UPSTAGE_API_KEY</code>. Two clean REST endpoints. Works
+            from any HTTP client.
+          </span>
+        </div>
+        <div class="cell bad">
+          <span class="badge">✗</span>
+          <span class="text">
+            Install codex CLI in the container + write <code>~/.codex/auth.json</code>
+            on startup + handle subprocess timeouts. Three failure surfaces.
+          </span>
+        </div>
+        <div class="cell meh">
+          <span class="badge">~</span>
+          <span class="text">
+            One env var, single REST call — but you'll spend an afternoon discovering
+            and configuring safety overrides for Korean documents.
+          </span>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="dim">
+          Cost predictability
+          <span class="sub">at 10k docs/day scale</span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            Per-API-call pricing, scales linearly. Easy to forecast and to attribute
+            per workload.
+          </span>
+        </div>
+        <div class="cell meh">
+          <span class="badge">~</span>
+          <span class="text">
+            Bundled with a ChatGPT subscription. Free at low volume; opaque scaling
+            model; per-seat licensing breaks at production scale.
+          </span>
+        </div>
+        <div class="cell win">
+          <span class="badge">✓</span>
+          <span class="text">
+            Per-token pricing with a generous free tier. Cheapest at low-to-mid volume.
+            Care needed at high volume — token spend grows with image resolution.
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- takeaways -->
+    <section class="takeaways glass">
+      <h2>Why Upstage wins this customer</h2>
+      <div class="list">
+        <div class="takeaway">
+          <div class="title">Korean documents, Korean models</div>
+          <p>Document Parse is the only one of the three trained for Korean enterprise documents specifically. Field labels work on the first try; we never needed prompt tricks for Hangul.</p>
+        </div>
+        <div class="takeaway">
+          <div class="title">No safety-override compromise</div>
+          <p>Gemini works only if we turn off every safety filter — explicitly, per category. For a customer who'll be audited, that's not a discussion they want to have.</p>
+        </div>
+        <div class="takeaway">
+          <div class="title">Deterministic JSON, deterministic ops</div>
+          <p>The same input returns the same output. That's the property an on-desk operator workflow actually needs — review-and-confirm, not retry-and-pray.</p>
+        </div>
+        <div class="takeaway">
+          <div class="title">One API key, two REST calls, done</div>
+          <p>No subprocesses, no auth files, no safety configs. The integration is small enough that a backend engineer ships it the same day.</p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      Built inside <a href="https://github.com/Richie-Kang/totaload-erp">Totaload OCR</a> ·
+      Live demo at <a href="https://totaload-frontend.onrender.com">totaload-frontend.onrender.com</a>
+    </footer>
+
+  </main>
+</body>
+</html>

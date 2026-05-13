@@ -10,6 +10,7 @@ import { PdfPreviewModal } from '../components/PdfPreviewModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { EmptyState, Skeleton, StatusBadge } from '../components/misc';
 import { ProviderSelector, useOcrProvider } from '../components/ProviderSelector';
+import { LiveClock } from '../components/LiveClock';
 import { useToast } from '../components/Toast';
 import { formatDateTime, todayKr } from '../lib/format';
 import type { FormValues } from '../lib/merge';
@@ -239,6 +240,9 @@ export function MalsoInputPage() {
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-6">
+      <div className="flex justify-end">
+        <LiveClock />
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         {vehicle ? (
           <>
@@ -372,6 +376,9 @@ function StateA({
   const drafts = (search.data ?? []).filter((v) => v.status === 'draft').slice(0, 10);
   return (
     <div className="mx-auto w-full max-w-3xl space-y-8 py-4">
+      <div className="flex justify-end">
+        <LiveClock />
+      </div>
       <div className="flex flex-wrap items-start gap-4">
         <div className="flex-1">
           <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
