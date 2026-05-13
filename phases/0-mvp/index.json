@@ -2,12 +2,43 @@
   "project": "중고차 수출 ERP (Totaload ERP)",
   "phase": "0-mvp",
   "steps": [
-    { "step": 0, "name": "project-setup", "status": "pending" },
-    { "step": 1, "name": "db-schema", "status": "pending" },
-    { "step": 2, "name": "ocr-service", "status": "pending" },
-    { "step": 3, "name": "backend-api", "status": "pending" },
-    { "step": 4, "name": "frontend", "status": "pending" },
-    { "step": 5, "name": "deploy", "status": "pending" },
-    { "step": 6, "name": "polish-and-verify", "status": "pending" }
-  ]
+    {
+      "step": 0,
+      "name": "project-setup",
+      "status": "completed",
+      "started_at": "2026-05-13T08:53:00+0900",
+      "summary": "npm workspaces monorepo: frontend/ (Vite+React+TS+Tailwind, eslint flat config, vitest dummy), backend/ (Express+TS, src/app.ts+index.ts with GET /api/health, tsx dev, vitest+supertest, migrate stub), ocr-service/ (FastAPI app/main.py GET /health, app/__init__.py, tests/test_smoke.py, requirements.txt incl pypdf/pypdfium2/reportlab/httpx). Root package.json scripts: lint/build/test (test runs workspace tests + `python3 -m pytest` in ocr-service). .gitignore extended (dist, .env*, storage/, __pycache__). .env.example with DATABASE_URL/BACKEND_PORT/OCR_SERVICE_URL/OCR_PORT/CORS_ORIGIN/STORAGE_DIR/TEMPLATE_PATH/CODEX_AUTH_JSON. assets/malso_application_template.pdf (copied+renamed from root PDF; 12 AcroForm fields verified incl trailing-space 'vehicle_year '), assets/samples/*.jpg. storage/.gitkeep. docs/ filled from master plan: PRD.md (§1), ARCHITECTURE.md (§2.1-2.8), ADR.md (ADR-001..010 + philosophy + 'confirmed codex CLI interface' note), UI_GUIDE.md (§4.1-4.7). Deploy skeleton (TODO-only): Dockerfile.frontend/backend/ocr, docker-compose.yml, render.yaml, README.md. codex CLI: INSTALLED (codex-cli 0.128.0); supports image input `-i/--image`, `-s/--sandbox read-only`, `--skip-git-repo-check`, `--output-last-message <FILE>`, `--json`, `--output-schema <FILE>` — step2 can proceed (image input supported). NOTE: machine has `python3` not `python`; root test script and README use `python3`."
+    },
+    {
+      "step": 1,
+      "name": "db-schema",
+      "status": "pending"
+    },
+    {
+      "step": 2,
+      "name": "ocr-service",
+      "status": "pending"
+    },
+    {
+      "step": 3,
+      "name": "backend-api",
+      "status": "pending"
+    },
+    {
+      "step": 4,
+      "name": "frontend",
+      "status": "pending"
+    },
+    {
+      "step": 5,
+      "name": "deploy",
+      "status": "pending"
+    },
+    {
+      "step": 6,
+      "name": "polish-and-verify",
+      "status": "pending"
+    }
+  ],
+  "created_at": "2026-05-13T08:53:00+0900"
 }

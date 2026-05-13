@@ -1,0 +1,15 @@
+{
+  "name": "totaload-erp",
+  "private": true,
+  "version": "0.0.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "echo \"Run 'npm run dev -w frontend' and 'npm run dev -w backend' in separate terminals, or use docker compose.\"",
+    "lint": "npm run lint --workspaces",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces && (cd ocr-service && python3 -m pytest -q)"
+  }
+}

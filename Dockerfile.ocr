@@ -1,0 +1,3 @@
+# TODO(step5): Python image, install requirements.txt, install the `codex` CLI,
+# entrypoint writes $CODEX_AUTH_JSON to ~/.codex/auth.json, then `uvicorn app.main:app`.
+# Skeleton only — see docs/ARCHITECTURE.md §2.6 and docs/ADR.md ADR-008.

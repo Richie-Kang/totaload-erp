@@ -3,7 +3,29 @@ node_modules/
 out/
 next-env.d.ts
 tsconfig.tsbuildinfo
+*.tsbuildinfo
 
 # phase execution outputs
 phases/**/phase*-output.json
 phases/**/step*-output.json
+
+# build output
+dist/
+frontend/dist/
+backend/dist/
+
+# env
+.env
+.env.*
+!.env.example
+
+# runtime storage
+storage/
+
+# python / ocr-service
+ocr-service/.venv/
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store

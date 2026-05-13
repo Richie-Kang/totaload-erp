@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pypdf
+python-multipart
+pillow
+pydantic
+pypdfium2
+httpx
+pytest
+reportlab

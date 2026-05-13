@@ -1,0 +1,6 @@
+# TODO(step5): Render Blueprint.
+# - frontend: static site (build the Vite app, publish dist/)
+# - backend: web service (Node), persistent disk mounted at storage/, env DATABASE_URL/OCR_SERVICE_URL/CORS_ORIGIN
+# - ocr-service: web service (Docker, Dockerfile.ocr), env CODEX_AUTH_JSON
+# - database: managed PostgreSQL
+# Skeleton only — see docs/ADR.md ADR-005 and the step5 plan.
