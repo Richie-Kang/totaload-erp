@@ -3,6 +3,8 @@
 자동차등록증 이미지 → 말소등록 신청서 PDF 자동 작성 + 차량/서류 검색.
 설계 문서: [`docs/PRD.md`](docs/PRD.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/ADR.md`](docs/ADR.md) · [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md).
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Richie-Kang/totaload-erp)
+
 구성: `frontend/` (React+Vite+TS), `backend/` (Node+Express+TS), `ocr-service/` (Python+FastAPI), `assets/` (PDF 템플릿·샘플), `storage/` (런타임 업로드/생성물, gitignore).
 
 ## 로컬 실행 (Docker)
