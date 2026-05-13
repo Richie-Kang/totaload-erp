@@ -4,18 +4,42 @@
 // - Gemini: Google Gemini 4-point spark with the Google rainbow
 
 export function UpstageIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  // 7-bar staircase that the official Upstage logo trails to the right of "upstage".
-  // Bars slope up-right with slanted (italic) ends to match the wordmark style.
+  // Upstage mark: an asymmetric diamond/star made of italic horizontal bars.
+  // Top tip sits to the right, bottom tip to the left, mid rows span the full width.
+  // Each bar is a parallelogram with the top edge shifted right relative to the bottom
+  // (italic up-right). Light-violet → deep-violet vertical gradient matches the brand.
+  const h = 4;   // bar height
+  const s = 5;   // italic slant — top shifted right of bottom by this much
+  // [y_top, x_left, x_right]
+  const bars: [number, number, number][] = [
+    [4, 68, 88],   // top-right tip
+    [12, 58, 90],
+    [20, 44, 92],
+    [28, 8, 92],
+    [36, 6, 90],   // widest band
+    [44, 6, 88],
+    [52, 8, 92],
+    [60, 10, 50],
+    [68, 8, 36],
+    [76, 6, 24],
+    [84, 4, 16],   // bottom-left tip
+  ];
   return (
-    <svg viewBox="0 0 32 32" className={className} aria-hidden="true">
-      <g fill="#7C3AED">
-        <path d="M5 23 L13 23 L11.5 25 L3.5 25 Z" />
-        <path d="M7 20 L17 20 L15.5 22 L5.5 22 Z" />
-        <path d="M9 17 L21 17 L19.5 19 L7.5 19 Z" />
-        <path d="M11 14 L23 14 L21.5 16 L9.5 16 Z" />
-        <path d="M13 11 L25 11 L23.5 13 L11.5 13 Z" />
-        <path d="M15 8 L25 8 L23.5 10 L13.5 10 Z" />
-        <path d="M17 5 L25 5 L23.5 7 L15.5 7 Z" />
+    <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
+      <defs>
+        <linearGradient id="up-grad" x1="50%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" stopColor="#C0C5FB" />
+          <stop offset="55%" stopColor="#8B7DF6" />
+          <stop offset="100%" stopColor="#5A2EE0" />
+        </linearGradient>
+      </defs>
+      <g fill="url(#up-grad)">
+        {bars.map(([yt, xl, xr], i) => (
+          <path
+            key={i}
+            d={`M ${xl} ${yt + h} L ${xr} ${yt + h} L ${xr + s} ${yt} L ${xl + s} ${yt} Z`}
+          />
+        ))}
       </g>
     </svg>
   );
