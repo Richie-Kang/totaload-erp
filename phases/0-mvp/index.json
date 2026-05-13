@@ -16,7 +16,7 @@
       "status": "completed",
       "started_at": "2026-05-13T09:05:10+0900",
       "summary": "PostgreSQL schema + pool + idempotent migration (pg, no ORM). backend/src/db/schema.sql: pgcrypto ext, vehicles + documents tables (columns/types exactly per ARCHITECTURE.md §2.4), indexes vehicles_reg_no_norm_idx / vehicles_vin_norm_idx (lower(replace(coalesce(...),' ','')) for partial search), vehicles_updated_at_idx (desc), documents_vehicle_id_idx, partial unique vehicles_vin_uniq (where vin is not null and vin<>''); no updated_at trigger (app sets updated_at=now()). backend/src/db/pool.ts: `pool` (pg.Pool from DATABASE_URL — no module-load crash if unset), `waitForDb(maxAttempts=10)` exponential backoff, `query<T>(sql, params?): Promise<pg.QueryResult<T>>`. backend/src/db/migrate.ts: `runMigrations(): Promise<void>` — waitForDb then runs schema.sql in one txn (idempotent, throws on failure); schema.sql resolved via import.meta.url. backend/src/db/migrate-cli.ts is `npm -w backend run migrate` target (build copies schema.sql to dist/db/). backend/src/index.ts now awaits runMigrations() before listen (exits 1 on failure). GET /api/health now returns {status:'ok', db:'ok'|'down'} via `select 1` ping (step3 adds ocr field). backend/test/migrate.test.ts (skips if no DATABASE_URL): runMigrations twice = no error, to_regclass('vehicles'/'documents') non-null, all 5 indexes present; health.test.ts updated for new shape. Deps added: pg, @types/pg. Verified against local postgres 16: migrate x2 idempotent, tables/indexes/columns correct, all tests pass; npm run build && npm run lint clean.",
-      "completed_at": "2026-05-13T09:10:00+0900"
+      "completed_at": "2026-05-13T09:09:25+0900"
     },
     {
       "step": 2,
