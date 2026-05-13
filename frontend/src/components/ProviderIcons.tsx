@@ -4,42 +4,48 @@
 // - Gemini: Google Gemini 4-point spark with the Google rainbow
 
 export function UpstageIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  // Upstage mark: an asymmetric diamond/star made of italic horizontal bars.
-  // Top tip sits to the right, bottom tip to the left, mid rows span the full width.
-  // Each bar is a parallelogram with the top edge shifted right relative to the bottom
-  // (italic up-right). Light-violet → deep-violet vertical gradient matches the brand.
-  const h = 4;   // bar height
-  const s = 5;   // italic slant — top shifted right of bottom by this much
-  // [y_top, x_left, x_right]
-  const bars: [number, number, number][] = [
-    [4, 68, 88],   // top-right tip
-    [12, 58, 90],
-    [20, 44, 92],
-    [28, 8, 92],
-    [36, 6, 90],   // widest band
-    [44, 6, 88],
-    [52, 8, 92],
-    [60, 10, 50],
-    [68, 8, 36],
-    [76, 6, 24],
-    [84, 4, 16],   // bottom-left tip
+  // Upstage mark — an asymmetric italic diamond / star: 11 horizontal parallelograms
+  // that taper to a sharp tip at the top-right and a sharp tip at the bottom-left,
+  // bulging to full width in the middle. Each bar is italic (top shifted right of
+  // bottom). The earlier version had blunt tips because the outermost bars were too
+  // wide; this version starts and ends with very short bars (8px in a 100-unit view).
+  const h = 5;   // bar height
+  const g = 2;   // gap between bars
+  const s = 7;   // italic slant (top shifted right of bottom)
+  // widths build up to the widest bar, then taper back. Tips are intentionally short.
+  // [x_left, x_right] for each row, top to bottom.
+  const lanes: [number, number][] = [
+    [76, 84],   // 0: top-right tip (width 8)
+    [68, 86],   // 1: width 18
+    [56, 90],   // 2: width 34
+    [40, 92],   // 3: width 52
+    [10, 92],   // 4: width 82
+    [6, 90],    // 5: width 84 (widest)
+    [8, 88],    // 6: width 80
+    [10, 58],   // 7: width 48 (taper begins)
+    [12, 40],   // 8: width 28
+    [14, 30],   // 9: width 16
+    [16, 24],   // 10: bottom-left tip (width 8)
   ];
+  const top0 = 100 / 2 - (lanes.length * (h + g) - g) / 2; // vertical center
   return (
     <svg viewBox="0 0 100 100" className={className} aria-hidden="true">
       <defs>
-        <linearGradient id="up-grad" x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stopColor="#C0C5FB" />
-          <stop offset="55%" stopColor="#8B7DF6" />
-          <stop offset="100%" stopColor="#5A2EE0" />
+        <linearGradient id="up-grad" x1="20%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%" stopColor="#9C8EF7" />
+          <stop offset="100%" stopColor="#6A38E2" />
         </linearGradient>
       </defs>
       <g fill="url(#up-grad)">
-        {bars.map(([yt, xl, xr], i) => (
-          <path
-            key={i}
-            d={`M ${xl} ${yt + h} L ${xr} ${yt + h} L ${xr + s} ${yt} L ${xl + s} ${yt} Z`}
-          />
-        ))}
+        {lanes.map(([xl, xr], i) => {
+          const yt = top0 + i * (h + g);
+          return (
+            <path
+              key={i}
+              d={`M ${xl} ${yt + h} L ${xr} ${yt + h} L ${xr + s} ${yt} L ${xl + s} ${yt} Z`}
+            />
+          );
+        })}
       </g>
     </svg>
   );
