@@ -1,9 +1,19 @@
-// Totaload ERP — frontend shell. Real screens (말소 입력 / 말소 검색) are built in step4.
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { SidebarLayout } from './components/SidebarLayout';
+import { MalsoInputPage } from './pages/MalsoInputPage';
+import { MalsoSearchPage } from './pages/MalsoSearchPage';
+
+// Totaload ERP — routes. See docs/UI_GUIDE.md §4.2.
 export function App() {
   return (
-    <div className="min-h-screen p-8">
-      <h1 className="text-2xl font-semibold">Totaload</h1>
-      <p className="mt-2 text-sm text-neutral-400">중고차 수출 ERP — MVP scaffold.</p>
-    </div>
+    <Routes>
+      <Route element={<SidebarLayout />}>
+        <Route path="/" element={<Navigate to="/malso/new" replace />} />
+        <Route path="/malso/new" element={<MalsoInputPage />} />
+        <Route path="/malso/search" element={<MalsoSearchPage />} />
+        <Route path="/malso/:id" element={<MalsoInputPage />} />
+        <Route path="*" element={<Navigate to="/malso/new" replace />} />
+      </Route>
+    </Routes>
   );
 }

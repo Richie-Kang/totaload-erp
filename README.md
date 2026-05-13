@@ -17,12 +17,25 @@ npm run build          # frontend + backend 컴파일
 npm run lint
 npm run test           # frontend/backend 테스트 + ocr-service pytest
 
-npm run dev -w frontend     # http://localhost:5173
+npm run dev -w frontend     # http://localhost:5173 (개발 서버; /api 요청은 BACKEND_URL 또는 :4000 으로 프록시)
 npm run dev -w backend      # http://localhost:4000  (GET /api/health)
 cd ocr-service && python3 -m pip install -r requirements.txt && python3 -m uvicorn app.main:app --reload   # http://localhost:8000/health
 ```
 
 환경변수는 `.env.example` 참고(`cp .env.example .env`).
+
+## 수동 UX 체크리스트 (frontend)
+
+backend(+postgres) 와 ocr-service(또는 모킹) 가 떠 있는 상태에서 `npm run dev -w frontend` 후 http://localhost:5173 :
+
+1. `/malso/new` 에서 샘플 등록증 드롭 → 즉시 2열·빈 폼·"분석 중" 배너; 그 사이 '주행거리(km)'에 값 입력 → 응답 도착 시 '주행거리'는 사용자 값 유지, 나머지 빈 칸만 OCR 값으로 채워짐; URL 이 `/malso/:id` 로 바뀜.
+2. 그 페이지 새로고침 → `/malso/:id` 로 복구, 입력값 보존; `/malso/new` 의 "작성 중" 목록에도 그 차량이 보임.
+3. 좌측 이미지 확대/이동/90° 회전 동작.
+4. 필드 수정 → "저장됨 HH:MM" 표시; 백엔드를 잠깐 죽이면 저장 실패 경고 + 라우트 이탈(탭 닫기) 시 confirm.
+5. "말소등록 신청서 PDF 만들기" → 미리보기 모달 → 다운로드/인쇄; 중요한 필드 비우고 시도 → confirm 후 빈 채로 생성 + 누락 안내 토스트.
+6. `/malso/search` 에서 차량번호/차대번호 일부 입력 → 디바운스 검색, 매칭 하이라이트; 검색어 비우면 "최근 차량"; 없는 값 → 0건 메시지; 결과/목록에 주민번호 안 보임; 행 클릭 → 상세.
+7. 상세에서 주민등록번호 칸 마스킹 + 눈 아이콘 토글.
+8. 키보드(Tab/Enter/Esc)만으로 업로드→입력→PDF 생성까지 가능.
 
 ## 배포
 
