@@ -1,15 +1,7 @@
-import { rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest';
 import request from 'supertest';
-
-// Use a throwaway storage dir; must be set before app/storage is imported.
-const STORAGE_DIR = vi.hoisted(() => {
-  const dir = `/tmp/totaload-api-test-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  process.env.STORAGE_DIR = dir;
-  return dir;
-});
 
 // Mock only the network-facing ocr-service client; keep helpers (emptyFields/failedResult) real.
 vi.mock('../src/services/ocr', async (importOriginal) => {
@@ -57,7 +49,6 @@ describe.skipIf(!hasDb)('backend API', () => {
 
   afterAll(async () => {
     await pool.end();
-    rmSync(STORAGE_DIR, { recursive: true, force: true });
   });
 
   it('GET /api/health includes db and ocr status', async () => {

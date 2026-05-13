@@ -3,7 +3,6 @@
 import { Router, type Response } from 'express';
 import multer from 'multer';
 import * as ocr from '../services/ocr.js';
-import * as storage from '../services/storage.js';
 import * as vehicles from '../services/vehicles.js';
 import { todayCompact } from '../lib/dates.js';
 import { ALLOWED_UPLOAD_MIME, detectUploadMime, extForMime } from '../lib/upload.js';
@@ -31,8 +30,6 @@ malsoRouter.post('/', upload.single('file'), async (req, res, next) => {
     const detected = detectUploadMime(file.buffer);
     if (!detected) return err(res, 400, 'BAD_CONTENT', '파일 내용이 허용된 형식(JPG/PNG/WEBP/PDF)이 아닙니다.');
 
-    const filePath = await storage.save(file.buffer, extForMime(detected));
-
     let extracted: ocr.ExtractResult;
     try {
       extracted = await ocr.extract(file.buffer, file.originalname || `upload.${extForMime(detected)}`);
@@ -44,7 +41,7 @@ malsoRouter.post('/', upload.single('file'), async (req, res, next) => {
     await vehicles.addDocument({
       vehicle_id: vehicle.id,
       kind: 'registration_cert',
-      file_path: filePath,
+      file_bytes: file.buffer,
       orig_name: file.originalname || null,
       mime: detected,
       size_bytes: file.buffer.length,
@@ -157,22 +154,19 @@ malsoRouter.post('/:id/pdf', async (req, res, next) => {
       return err(res, 502, 'OCR_FILL_FAILED', 'PDF 생성 서비스를 사용할 수 없습니다.');
     }
 
-    let filePath: string;
     try {
-      filePath = await storage.saveGenerated(pdf, 'pdf');
+      await vehicles.addDocument({
+        vehicle_id: v.id,
+        kind: 'malso_application',
+        file_bytes: pdf,
+        orig_name: null,
+        mime: 'application/pdf',
+        size_bytes: pdf.length,
+      });
     } catch (e) {
       console.error(JSON.stringify({ level: 'error', msg: 'pdf store failed', id: v.id, error: String(e) }));
       return err(res, 500, 'STORAGE_FULL', 'PDF 저장에 실패했습니다.');
     }
-
-    await vehicles.addDocument({
-      vehicle_id: v.id,
-      kind: 'malso_application',
-      file_path: filePath,
-      orig_name: null,
-      mime: 'application/pdf',
-      size_bytes: pdf.length,
-    });
     await vehicles.setCompleted(v.id);
 
     const label = (v.reg_no || v.vin || 'vehicle').replace(/\s+/g, '');

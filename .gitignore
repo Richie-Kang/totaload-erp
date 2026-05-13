@@ -19,7 +19,7 @@ backend/dist/
 .env.*
 !.env.example
 
-# runtime storage
+# legacy local storage dir — no longer used (bytes live in Postgres, ADR-011)
 storage/
 
 # python / ocr-service

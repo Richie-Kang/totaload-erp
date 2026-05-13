@@ -43,10 +43,11 @@ MVP 속도 최우선. 외부 의존성·키 최소화(사용자가 이미 가진
 **이유**: 사용자가 서버 프로비저닝 안 하고도 Blueprint 한 번으로 다서비스+DB 배포; Docker 지원으로 codex CLI 설치 가능.
 **트레이드오프**: 벤더 종속, 콜드스타트, 무료 티어 한계. 대안(검토 후 기각): 단일 VPS+compose(사용자가 서버 준비해야 함 — 거부됨), Fly.io(Postgres·디스크 설정 더 번거로움), Vercel+Railway(서비스 분산 복잡).
 
-### ADR-006 — 파일 저장 = 로컬 디스크(S3 아님)
-**결정**: backend 에 마운트된 영구 디스크 `storage/`.
+### ADR-006 — 파일 저장 = 로컬 디스크(S3 아님)  ⚠️ ADR-011 로 대체됨
+**결정(초기)**: backend 에 마운트된 영구 디스크 `storage/`.
 **이유**: MVP 단순.
-**트레이드오프**: 단일 노드·백업 수동. 향후 S3 전환 여지(스토리지 접근을 함수로 추상화).
+**트레이드오프**: 단일 노드·백업 수동.
+**대체 사유**: Render free 플랜이 영구 디스크를 지원하지 않아 Starter($7/mo) 강제 → 무료 배포를 위해 DB bytea 로 전환(ADR-011).
 
 ### ADR-007 — harness 워크플로우 사용
 **결정**: `phases/0-mvp/step{N}.md` + `execute.py` 순차 실행.
@@ -69,6 +70,12 @@ MVP 속도 최우선. 외부 의존성·키 최소화(사용자가 이미 가진
 **이유**: 단순.
 **트레이드오프**: 2페이지 이상 등록증 스캔 시 누락 — 실무상 등록증 앞면이 1페이지라 수용.
 
+### ADR-011 — 파일 저장 = Postgres `bytea` 컬럼 (ADR-006 대체)
+**결정**: 업로드 이미지와 생성된 PDF 의 바이트를 `documents.file_bytes bytea` 컬럼에 직접 저장. 영구 디스크 / 객체 스토리지 미사용. 코드 경로: `routes/malso.ts` → `vehicles.addDocument({file_bytes: Buffer, …})` → INSERT. 다운로드는 `vehicles.getDocumentBytes(id)` → `routes/files.ts` 가 `res.send(bytes)`. `getById` 가 반환하는 `DocumentRow` 에는 `file_bytes` 가 포함되지 않아 목록·상세 조회 시 바이트는 로드되지 않는다.
+**이유**: Render free 플랜이 영구 디스크를 지원하지 않아(ADR-006 의 disk 가 Starter $7/mo 를 강제) 완전 무료 배포가 불가했다. bytea 로 옮기면 backend 도 free 플랜이 되고, DB 한 곳만 관리하면 된다(파일/메타 일관성도 트랜잭션으로 보장). 외부 Postgres(Supabase/Neon free) 와 결합하면 영구 데이터 보존도 30일 만료 없이 가능.
+**트레이드오프**: ① DB 용량을 파일이 잡아먹는다(차량 1건 ≈ 2~3MB, Supabase free 500MB ≈ 200~250건). ② TOAST 압축이 PDF/JPEG 같은 이미 압축된 바이너리엔 거의 무의미. ③ 전체 row 를 SELECT 하면 bytes 까지 읽으니 `getById`/`search` 는 명시적 컬럼 리스트로 bytes 제외. ④ pg 드라이버는 bytea 를 한 번에 Buffer 로 메모리에 올린다(대형 파일 스트리밍 불가) — 20MB 업로드 한도가 곧 메모리 한도. 완화: 한도 근접 시 R2/S3 로 마이그레이션(아래 향후 과제).
+**대안(검토 후 기각)**: ① Supabase Storage(SDK 추가, 자격증명 한 벌 더). ② Cloudflare R2(S3 SDK 추가, 별도 계정). ③ 유료 디스크 유지(월 비용 발생). 무료·최소 변경의 균형으로 bytea 채택.
+
 ---
 
 ## 향후 과제 (MVP 범위 밖 — 위 ADR 들에 산재한 것을 모음)
@@ -76,6 +83,6 @@ MVP 속도 최우선. 외부 의존성·키 최소화(사용자가 이미 가진
 - **인증·권한·감사 로그** — 현재 로그인 없음(ADR-004). 사용자 계정·역할·접근 제어 추가.
 - **주민등록번호 컬럼 암호화** — 현재 평문 저장(ADR-004, PRD §7). at-rest 암호화 + 복호화 키 관리.
 - **OCR 비동기 잡 큐** — 현재 동기 90s 타임아웃(ADR-009). 업로드 즉시 응답 + 잡 상태 폴링/웹훅으로 전환.
-- **파일 저장 S3 전환** — 현재 로컬 디스크(ADR-006). 스토리지 접근이 함수로 추상화돼 있어 교체 지점은 `backend/src/services/storage.ts` 한 곳.
+- **파일 저장 R2/S3 전환** — 현재 DB bytea(ADR-011). DB 용량 한도 근접 또는 대용량 파일이 필요해지면 교체. 교체 지점은 `backend/src/services/vehicles.ts` 의 `addDocument` / `getDocumentBytes` 두 함수만 + `documents` 테이블의 컬럼 변경(`file_bytes` → `file_key text`).
 - **DB / 디스크 백업** — 현재 수동(PRD §6). 정기 스냅샷·복구 절차.
 - **(검토 후보)** `DELETE /api/malso/:id`(PRD §10), 멀티페이지 등록증 OCR(ADR-010), 동시 편집 충돌 감지(ADR-004), 모바일 전용 UI(PRD §8).

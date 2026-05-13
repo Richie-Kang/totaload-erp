@@ -47,9 +47,6 @@ services:
       DATABASE_URL: postgresql://totaload:totaload@postgres:5432/totaload
       OCR_SERVICE_URL: http://ocr:8000
       CORS_ORIGIN: http://localhost:5173
-      STORAGE_DIR: /data/storage
-    volumes:
-      - storage:/data/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,4 +67,3 @@ services:
 
 volumes:
   pgdata:
-  storage:

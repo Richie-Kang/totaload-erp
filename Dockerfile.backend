@@ -1,5 +1,5 @@
 # Backend API (Node/Express). Runs DB migrations on boot, then listens.
-# STORAGE_DIR must point at the mounted persistent disk (see render.yaml / ADR-006).
+# Document bytes are stored in Postgres (no persistent disk required).
 
 # --- build stage ---
 FROM node:20-slim AS build
@@ -20,7 +20,6 @@ COPY frontend/package.json ./frontend/package.json
 COPY backend/package.json ./backend/package.json
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/backend/dist ./backend/dist
-ENV STORAGE_DIR=/data/storage
 ENV PORT=4000
 EXPOSE 4000
 CMD ["node", "backend/dist/index.js"]

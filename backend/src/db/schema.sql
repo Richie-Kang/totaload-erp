@@ -28,12 +28,17 @@ CREATE TABLE IF NOT EXISTS documents (
   id          uuid primary key default gen_random_uuid(),
   vehicle_id  uuid not null references vehicles(id) on delete cascade,
   kind        text not null,
-  file_path   text not null,
+  file_bytes  bytea not null,
   orig_name   text,
   mime        text not null,
   size_bytes  integer not null,
   created_at  timestamptz not null default now()
 );
+
+-- Migrate older dev DBs from file_path (disk-backed) to file_bytes (DB-backed).
+-- Production has no prior data; this is just for local DBs created before the switch.
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS file_bytes bytea;
+ALTER TABLE documents DROP COLUMN IF EXISTS file_path;
 
 CREATE INDEX IF NOT EXISTS vehicles_reg_no_norm_idx ON vehicles (lower(replace(coalesce(reg_no, ''), ' ', '')));
 CREATE INDEX IF NOT EXISTS vehicles_vin_norm_idx ON vehicles (lower(replace(coalesce(vin, ''), ' ', '')));

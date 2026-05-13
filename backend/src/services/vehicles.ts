@@ -37,16 +37,18 @@ export interface VehicleSummary {
   created_at: string;
 }
 
+// DocumentRow never includes file_bytes — those are fetched only on download (getDocumentBytes).
 export interface DocumentRow {
   id: string;
   vehicle_id: string;
   kind: string;
-  file_path: string;
   orig_name: string | null;
   mime: string;
   size_bytes: number;
   created_at: string;
 }
+
+const DOC_COLS = 'id, vehicle_id, kind, orig_name, mime, size_bytes, created_at';
 
 const NUMERIC_FIELDS = new Set(['mileage', 'weight', 'total_weight']);
 
@@ -120,7 +122,10 @@ export async function createFromOcr(extract: ExtractResult): Promise<Vehicle> {
 export async function getById(id: string): Promise<{ vehicle: Vehicle; documents: DocumentRow[] } | null> {
   const v = await query<Vehicle>('select * from vehicles where id = $1', [id]);
   if (!v.rows[0]) return null;
-  const d = await query<DocumentRow>('select * from documents where vehicle_id = $1 order by created_at asc', [id]);
+  const d = await query<DocumentRow>(
+    `select ${DOC_COLS} from documents where vehicle_id = $1 order by created_at asc`,
+    [id],
+  );
   return { vehicle: v.rows[0], documents: d.rows };
 }
 
@@ -151,22 +156,28 @@ export async function setCompleted(id: string): Promise<void> {
 export async function addDocument(doc: {
   vehicle_id: string;
   kind: string;
-  file_path: string;
+  file_bytes: Buffer;
   orig_name: string | null;
   mime: string;
   size_bytes: number;
 }): Promise<DocumentRow> {
   const r = await query<DocumentRow>(
-    `insert into documents (vehicle_id, kind, file_path, orig_name, mime, size_bytes)
-     values ($1,$2,$3,$4,$5,$6) returning *`,
-    [doc.vehicle_id, doc.kind, doc.file_path, doc.orig_name, doc.mime, doc.size_bytes],
+    `insert into documents (vehicle_id, kind, file_bytes, orig_name, mime, size_bytes)
+     values ($1,$2,$3,$4,$5,$6) returning ${DOC_COLS}`,
+    [doc.vehicle_id, doc.kind, doc.file_bytes, doc.orig_name, doc.mime, doc.size_bytes],
   );
   return r.rows[0];
 }
 
-export async function getDocumentById(id: string): Promise<DocumentRow | null> {
-  const r = await query<DocumentRow>('select * from documents where id = $1', [id]);
-  return r.rows[0] ?? null;
+// Fetches the raw bytes + mime for the download route. Returns null if no such document.
+export async function getDocumentBytes(id: string): Promise<{ bytes: Buffer; mime: string } | null> {
+  const r = await query<{ file_bytes: Buffer; mime: string }>(
+    'select file_bytes, mime from documents where id = $1',
+    [id],
+  );
+  const row = r.rows[0];
+  if (!row) return null;
+  return { bytes: row.file_bytes, mime: row.mime };
 }
 
 const SUMMARY_COLS = 'id, reg_no, vin, model, owner_name, status, created_at';
