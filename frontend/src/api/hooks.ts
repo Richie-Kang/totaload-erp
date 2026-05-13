@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query';
 import { apiDelete, apiGet, apiPatch, apiPostForm, apiPostPdf } from './client';
 import type {
+  OcrProvider,
   UploadResponse,
   VehicleDetail,
   VehicleFieldValues,
@@ -14,9 +15,10 @@ import type {
 
 export function useUploadMalso() {
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({ file, provider }: { file: File; provider: OcrProvider }) => {
       const form = new FormData();
       form.append('file', file);
+      form.append('provider', provider);
       return apiPostForm<UploadResponse>('/api/malso', form);
     },
   });

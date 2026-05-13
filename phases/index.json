@@ -4,6 +4,11 @@
       "dir": "0-mvp",
       "status": "completed",
       "completed_at": "2026-05-13T09:57:44+0900"
+    },
+    {
+      "dir": "1-multi-ocr",
+      "status": "completed",
+      "completed_at": "2026-05-13T22:00:00+0900"
     }
   ]
 }

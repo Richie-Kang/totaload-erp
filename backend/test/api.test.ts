@@ -27,13 +27,23 @@ function token() {
 }
 
 function ocrResult(over: Partial<ocr.ExtractResult> = {}): ocr.ExtractResult {
-  return { fields: ocr.emptyFields(), raw: '{}', status: 'partial', warnings: [], errorCode: null, ...over };
+  return {
+    fields: ocr.emptyFields(),
+    raw: '{}',
+    status: 'partial',
+    warnings: [],
+    errorCode: null,
+    provider: 'upstage',
+    ...over,
+  };
 }
 
 // Uploads the sample jpg with a stubbed OCR result; returns the created vehicle.
-async function upload(result: ocr.ExtractResult) {
+async function upload(result: ocr.ExtractResult, provider?: string) {
   mockedExtract.mockResolvedValueOnce(result);
-  const res = await request(app).post('/api/malso').attach('file', SAMPLE_JPG);
+  const req = request(app).post('/api/malso').attach('file', SAMPLE_JPG);
+  if (provider) req.field('provider', provider);
+  const res = await req;
   expect(res.status).toBe(201);
   return res;
 }
@@ -106,6 +116,41 @@ describe.skipIf(!hasDb)('backend API', () => {
     const res = await request(app).post('/api/malso').attach('file', SAMPLE_JPG);
     expect(res.status).toBe(201);
     expect(res.body.ocrStatus).toBe('failed');
+  });
+
+  it('forwards the provider field to ocr.extract and echoes ocrProvider', async () => {
+    const t = token();
+    mockedExtract.mockResolvedValueOnce(
+      ocrResult({ fields: { ...ocr.emptyFields(), vehicle_vin: `VN${t}` }, provider: 'gemini' }),
+    );
+    const res = await request(app)
+      .post('/api/malso')
+      .field('provider', 'gemini')
+      .attach('file', SAMPLE_JPG);
+    expect(res.status).toBe(201);
+    expect(res.body.ocrProvider).toBe('gemini');
+    // ocr.extract should have been called with provider='gemini' as 3rd arg
+    expect(mockedExtract).toHaveBeenCalledWith(expect.any(Buffer), expect.any(String), 'gemini');
+  });
+
+  it('defaults provider to upstage when no field is supplied', async () => {
+    const t = token();
+    mockedExtract.mockResolvedValueOnce(
+      ocrResult({ fields: { ...ocr.emptyFields(), vehicle_vin: `VN${t}` }, provider: 'upstage' }),
+    );
+    const res = await request(app).post('/api/malso').attach('file', SAMPLE_JPG);
+    expect(res.status).toBe(201);
+    expect(res.body.ocrProvider).toBe('upstage');
+    expect(mockedExtract).toHaveBeenCalledWith(expect.any(Buffer), expect.any(String), 'upstage');
+  });
+
+  it('rejects an unknown provider with 400 BAD_PROVIDER', async () => {
+    const res = await request(app)
+      .post('/api/malso')
+      .field('provider', 'claude')
+      .attach('file', SAMPLE_JPG);
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('BAD_PROVIDER');
   });
 
   it('PATCH /api/malso/:id updates allowed fields', async () => {

@@ -27,7 +27,14 @@ services:
         value: 8000
       - key: TEMPLATE_PATH
         value: /app/assets/malso_application_template.pdf
-      # The contents of a ChatGPT ~/.codex/auth.json — set manually in the dashboard.
+      # Primary provider — set in the dashboard (sync:false). Used for Upstage Document Parse
+      # and Solar Chat (see ocr-service/app/providers/upstage.py).
+      - key: UPSTAGE_API_KEY
+        sync: false
+      # Secondary provider — Gemini multimodal (gemini-1.5-flash by default).
+      - key: GEMINI_API_KEY
+        sync: false
+      # Tertiary provider — contents of a ChatGPT ~/.codex/auth.json (ADR-008).
       - key: CODEX_AUTH_JSON
         sync: false
 

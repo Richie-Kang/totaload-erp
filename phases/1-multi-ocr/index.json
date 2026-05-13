@@ -1,0 +1,30 @@
+{
+  "task": "multi-ocr",
+  "description": "Add Upstage Document OCR (primary) + Gemini multimodal alongside the existing Codex OCR. User can choose the provider from the top-right of the 말소 입력 screen. README rewritten for a quick interviewer evaluation (live URL at the top, English).",
+  "steps": [
+    {
+      "id": 0,
+      "name": "ocr-service-providers",
+      "summary": "providers/{codex,upstage,gemini}.py — shared interface; extract.py dispatches by provider; /extract accepts provider form field (default upstage); /health reports per-provider readiness",
+      "status": "completed"
+    },
+    {
+      "id": 1,
+      "name": "backend-provider-passthrough",
+      "summary": "POST /api/malso accepts multipart provider field; ocr.extract(buf, name, provider) extended; upload response carries ocrProvider; vehicles.raw_ocr stores it for the record",
+      "status": "completed"
+    },
+    {
+      "id": 2,
+      "name": "frontend-provider-selector",
+      "summary": "MalsoInputPage 우측 상단 selector (Upstage default + top, Codex, Gemini); localStorage persistence; FormData carries provider; provider name surfaces in the OCR result banner",
+      "status": "completed"
+    },
+    {
+      "id": 3,
+      "name": "deploy-and-readme",
+      "summary": "render.yaml: UPSTAGE_API_KEY / GEMINI_API_KEY (sync:false); README rewritten interviewer-first (live URL + 30-sec demo + Upstage integration architecture in English)",
+      "status": "completed"
+    }
+  ]
+}

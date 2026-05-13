@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useGeneratePdf, useSearch, useUploadMalso, useVehicle } from '../api/hooks';
-import type { OcrFields, OcrStatus } from '../api/types';
+import type { OcrFields, OcrProvider, OcrStatus } from '../api/types';
 import { ApiError } from '../api/client';
 import { Dropzone } from '../components/Dropzone';
 import { ImageViewer, type ViewerItem } from '../components/ImageViewer';
@@ -9,11 +9,18 @@ import { VehicleForm, type ApplyOcr } from '../components/VehicleForm';
 import { PdfPreviewModal } from '../components/PdfPreviewModal';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { EmptyState, Skeleton, StatusBadge } from '../components/misc';
+import { ProviderSelector, useOcrProvider } from '../components/ProviderSelector';
 import { useToast } from '../components/Toast';
 import { formatDateTime, todayKr } from '../lib/format';
 import type { FormValues } from '../lib/merge';
 
-type OcrResult = { status: OcrStatus; warnings: string[]; errorCode: string | null; fields: OcrFields };
+type OcrResult = {
+  status: OcrStatus;
+  warnings: string[];
+  errorCode: string | null;
+  fields: OcrFields;
+  provider?: OcrProvider;
+};
 
 export function MalsoInputPage() {
   const { id: routeId } = useParams();
@@ -36,6 +43,7 @@ export function MalsoInputPage() {
   const upload = useUploadMalso();
   const vehicleQuery = useVehicle(routeId);
   const generatePdf = useGeneratePdf(routeId ?? '');
+  const [provider, setProvider] = useOcrProvider();
 
   useEffect(() => {
     if (prevRouteId.current === routeId) return;
@@ -76,23 +84,32 @@ export function MalsoInputPage() {
       if (prev) URL.revokeObjectURL(prev.url);
       return { file, url };
     });
-    upload.mutate(file, {
-      onSuccess: (res) => {
-        justUploadedId.current = res.vehicle.id;
-        if (!analyzeCancelledRef.current) {
-          setOcrResult({ status: res.ocrStatus, warnings: res.warnings, errorCode: res.errorCode, fields: res.fields });
-          applyToken.current += 1;
-          setApplyOcr({ fields: res.fields, mode: 'fill-empty', token: applyToken.current });
-        }
-        if (res.vehicle.id !== routeId) navigate(`/malso/${res.vehicle.id}`, { replace: true });
+    upload.mutate(
+      { file, provider },
+      {
+        onSuccess: (res) => {
+          justUploadedId.current = res.vehicle.id;
+          if (!analyzeCancelledRef.current) {
+            setOcrResult({
+              status: res.ocrStatus,
+              warnings: res.warnings,
+              errorCode: res.errorCode,
+              fields: res.fields,
+              provider: res.ocrProvider,
+            });
+            applyToken.current += 1;
+            setApplyOcr({ fields: res.fields, mode: 'fill-empty', token: applyToken.current });
+          }
+          if (res.vehicle.id !== routeId) navigate(`/malso/${res.vehicle.id}`, { replace: true });
+        },
+        onError: (e) => {
+          toast.error(
+            e instanceof ApiError ? `업로드 실패: ${e.message}` : '업로드에 실패했습니다.',
+            { label: '재시도', onClick: () => startUpload(file) },
+          );
+        },
       },
-      onError: (e) => {
-        toast.error(
-          e instanceof ApiError ? `업로드 실패: ${e.message}` : '업로드에 실패했습니다.',
-          { label: '재시도', onClick: () => startUpload(file) },
-        );
-      },
-    });
+    );
   }
   // keep latest cancelled flag readable inside the async callback
   const analyzeCancelledRef = useRef(analyzeCancelled);
@@ -106,23 +123,32 @@ export function MalsoInputPage() {
     reuploadInput.current?.click();
   }
   function onReuploadFile(file: File) {
-    upload.mutate(file, {
-      onSuccess: (res) => {
-        if (res.vehicle.id !== routeId) {
-          justUploadedId.current = res.vehicle.id;
-          navigate(`/malso/${res.vehicle.id}`, { replace: true });
-        }
-        vehicleQuery.refetch();
-        if (reuploadMode.current !== 'attach') {
-          setOcrResult({ status: res.ocrStatus, warnings: res.warnings, errorCode: res.errorCode, fields: res.fields });
-          applyToken.current += 1;
-          setApplyOcr({ fields: res.fields, mode: reuploadMode.current, token: applyToken.current });
-        } else {
-          toast.success('이미지를 첨부했습니다.');
-        }
+    upload.mutate(
+      { file, provider },
+      {
+        onSuccess: (res) => {
+          if (res.vehicle.id !== routeId) {
+            justUploadedId.current = res.vehicle.id;
+            navigate(`/malso/${res.vehicle.id}`, { replace: true });
+          }
+          vehicleQuery.refetch();
+          if (reuploadMode.current !== 'attach') {
+            setOcrResult({
+              status: res.ocrStatus,
+              warnings: res.warnings,
+              errorCode: res.errorCode,
+              fields: res.fields,
+              provider: res.ocrProvider,
+            });
+            applyToken.current += 1;
+            setApplyOcr({ fields: res.fields, mode: reuploadMode.current as 'fill-empty' | 'overwrite', token: applyToken.current });
+          } else {
+            toast.success('이미지를 첨부했습니다.');
+          }
+        },
+        onError: (e) => toast.error(e instanceof ApiError ? e.message : '업로드에 실패했습니다.'),
       },
-      onError: (e) => toast.error(e instanceof ApiError ? e.message : '업로드에 실패했습니다.'),
-    });
+    );
   }
 
   // ---- confirm modal (promise-based) for "important field empty" / "overwrite on re-analyze" ----
@@ -173,7 +199,9 @@ export function MalsoInputPage() {
   const vehicle = vehicleQuery.data?.vehicle ?? null;
 
   // ---- state A: no vehicle yet, no upload in flight ----
-  if (!routeId && !localFile) return <StateA onFile={startUpload} />;
+  if (!routeId && !localFile) {
+    return <StateA onFile={startUpload} provider={provider} setProvider={setProvider} />;
+  }
 
   // ---- state C reached via search: vehicle still loading ----
   if (routeId && !localFile && vehicleQuery.isLoading) {
@@ -198,17 +226,24 @@ export function MalsoInputPage() {
 
   return (
     <div className="space-y-4">
-      {vehicle && (
-        <div className="flex flex-wrap items-center gap-3">
-          <button onClick={() => navigate('/malso/search')} className="text-sm text-neutral-400 hover:text-neutral-200">← 검색으로</button>
-          <h1 className="text-xl font-semibold">{vehicle.reg_no || '(차량번호 미입력)'}</h1>
-          <span className="text-sm text-neutral-400">{vehicle.model || '차명 미입력'}</span>
-          <StatusBadge status={vehicle.status} />
-          <span className="ml-auto text-xs text-neutral-500">
-            생성 {formatDateTime(vehicle.created_at)} · 수정 {formatDateTime(vehicle.updated_at)}
-          </span>
+      <div className="flex flex-wrap items-center gap-3">
+        {vehicle ? (
+          <>
+            <button onClick={() => navigate('/malso/search')} className="text-sm text-neutral-400 hover:text-neutral-200">← 검색으로</button>
+            <h1 className="text-xl font-semibold">{vehicle.reg_no || '(차량번호 미입력)'}</h1>
+            <span className="text-sm text-neutral-400">{vehicle.model || '차명 미입력'}</span>
+            <StatusBadge status={vehicle.status} />
+            <span className="hidden text-xs text-neutral-500 sm:inline">
+              생성 {formatDateTime(vehicle.created_at)} · 수정 {formatDateTime(vehicle.updated_at)}
+            </span>
+          </>
+        ) : (
+          <h1 className="text-xl font-semibold">말소 입력</h1>
+        )}
+        <div className="ml-auto">
+          <ProviderSelector value={provider} onChange={setProvider} disabled={upload.isPending} />
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="min-h-[420px]">
@@ -294,15 +329,26 @@ export function MalsoInputPage() {
 }
 
 // ---- state A ----
-function StateA({ onFile }: { onFile: (f: File) => void }) {
+function StateA({
+  onFile,
+  provider,
+  setProvider,
+}: {
+  onFile: (f: File) => void;
+  provider: OcrProvider;
+  setProvider: (p: OcrProvider) => void;
+}) {
   const navigate = useNavigate();
   const search = useSearch('');
   const drafts = (search.data ?? []).filter((v) => v.status === 'draft').slice(0, 10);
   return (
     <div className="mx-auto max-w-2xl space-y-8 py-8">
-      <div>
-        <h1 className="mb-1 text-2xl font-semibold">말소 입력</h1>
-        <p className="text-sm text-neutral-400">자동차등록증을 올리면 빈 폼이 즉시 열리고, 분석이 끝나면 빈 칸이 자동으로 채워집니다.</p>
+      <div className="flex items-start gap-3">
+        <div className="flex-1">
+          <h1 className="mb-1 text-2xl font-semibold">말소 입력</h1>
+          <p className="text-sm text-neutral-400">자동차등록증을 올리면 빈 폼이 즉시 열리고, 분석이 끝나면 빈 칸이 자동으로 채워집니다.</p>
+        </div>
+        <ProviderSelector value={provider} onChange={setProvider} />
       </div>
       <Dropzone onFile={onFile} />
       <div>

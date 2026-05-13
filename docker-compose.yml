@@ -33,6 +33,8 @@ services:
       TEMPLATE_PATH: /app/assets/malso_application_template.pdf
       # Passed through from the host shell if set; otherwise the mount below is used.
       CODEX_AUTH_JSON: ${CODEX_AUTH_JSON:-}
+      UPSTAGE_API_KEY: ${UPSTAGE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
       - ${HOME}/.codex:/root/.codex:ro
 

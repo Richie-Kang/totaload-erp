@@ -84,6 +84,7 @@ export async function createFromOcr(extract: ExtractResult): Promise<Vehicle> {
     status: extract.status,
     warnings: extract.warnings,
     errorCode: extract.errorCode,
+    provider: extract.provider,
   };
   const params = [
     emptyToNull(f.vehicle_reg_no),

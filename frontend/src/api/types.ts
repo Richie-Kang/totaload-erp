@@ -2,6 +2,9 @@
 
 export type OcrStatus = 'ok' | 'partial' | 'failed';
 export type VehicleStatus = 'draft' | 'completed';
+export type OcrProvider = 'upstage' | 'codex' | 'gemini';
+export const OCR_PROVIDERS: readonly OcrProvider[] = ['upstage', 'codex', 'gemini'];
+export const DEFAULT_OCR_PROVIDER: OcrProvider = 'upstage';
 
 export interface Vehicle {
   id: string;
@@ -59,6 +62,7 @@ export interface UploadResponse {
   vehicle: Vehicle;
   fields: OcrFields;
   ocrStatus: OcrStatus;
+  ocrProvider?: OcrProvider;
   warnings: string[];
   errorCode: string | null;
 }

@@ -1,8 +1,8 @@
 """Totaload ERP — OCR/PDF service (FastAPI). Stateless.
 
 Endpoints:
-- GET  /health    : liveness + codex status
-- POST /extract    : image upload -> codex OCR -> normalized fields (always 200; 429 if busy)
+- GET  /health    : liveness + per-provider readiness (codex / upstage / gemini)
+- POST /extract    : image upload -> selected provider -> normalized fields (always 200; 429 if busy)
 - POST /fill-pdf   : logical field values -> filled malso application PDF bytes
 """
 
@@ -11,13 +11,15 @@ import os
 import stat
 from typing import Optional
 
-from fastapi import FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import JSONResponse
 
 from . import extract as extract_mod
 from . import fill_pdf as fill_pdf_mod
-from .codex_client import codex_health
+from . import providers
 from .schema import ExtractResponse, FillPdfRequest
+
+ALLOWED_PROVIDERS = {"upstage", "codex", "gemini"}
 
 app = FastAPI(title="Totaload OCR/PDF service")
 
@@ -38,23 +40,40 @@ def _bootstrap_codex_auth() -> None:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "codex": codex_health()}
+    return {
+        "status": "ok",
+        # primary provider listed first
+        "upstage": providers.provider_health("upstage"),
+        "codex": providers.provider_health("codex"),
+        "gemini": providers.provider_health("gemini"),
+    }
 
 
 @app.post("/extract", response_model=ExtractResponse)
-async def post_extract(file: Optional[UploadFile] = File(default=None)) -> ExtractResponse:
+async def post_extract(
+    file: Optional[UploadFile] = File(default=None),
+    provider: Optional[str] = Form(default=None),
+) -> ExtractResponse:
     if file is None:
         raise HTTPException(status_code=400, detail={"error": {"code": "NO_FILE", "message": "파일이 필요합니다"}})
     data = await file.read()
     if not data:
         raise HTTPException(status_code=400, detail={"error": {"code": "EMPTY_FILE", "message": "빈 파일입니다"}})
+    chosen = (provider or "upstage").lower()
+    if chosen not in ALLOWED_PROVIDERS:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": {"code": "BAD_PROVIDER", "message": f"unknown provider: {provider}"}},
+        )
     if not extract_mod.OCR_SEMAPHORE.acquire(blocking=False):
         raise HTTPException(
             status_code=429,
             detail={"error": {"code": "OCR_BUSY", "message": "OCR 처리량 초과 — 잠시 후 재시도"}},
         )
     try:
-        return await asyncio.to_thread(extract_mod.extract_from_upload, data, file.filename or "")
+        return await asyncio.to_thread(
+            extract_mod.extract_from_upload, data, file.filename or "", chosen
+        )
     finally:
         extract_mod.OCR_SEMAPHORE.release()
 

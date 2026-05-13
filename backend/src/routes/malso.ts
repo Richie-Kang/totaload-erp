@@ -3,6 +3,7 @@
 import { Router, type Response } from 'express';
 import multer from 'multer';
 import * as ocr from '../services/ocr.js';
+import { ALLOWED_OCR_PROVIDERS, DEFAULT_OCR_PROVIDER, type OcrProvider } from '../services/ocr.js';
 import * as vehicles from '../services/vehicles.js';
 import { todayCompact } from '../lib/dates.js';
 import { ALLOWED_UPLOAD_MIME, detectUploadMime, extForMime } from '../lib/upload.js';
@@ -30,11 +31,19 @@ malsoRouter.post('/', upload.single('file'), async (req, res, next) => {
     const detected = detectUploadMime(file.buffer);
     if (!detected) return err(res, 400, 'BAD_CONTENT', '파일 내용이 허용된 형식(JPG/PNG/WEBP/PDF)이 아닙니다.');
 
+    const rawProvider = typeof req.body?.provider === 'string' ? req.body.provider.toLowerCase() : '';
+    const provider: OcrProvider = ALLOWED_OCR_PROVIDERS.has(rawProvider as OcrProvider)
+      ? (rawProvider as OcrProvider)
+      : DEFAULT_OCR_PROVIDER;
+    if (rawProvider && !ALLOWED_OCR_PROVIDERS.has(rawProvider as OcrProvider)) {
+      return err(res, 400, 'BAD_PROVIDER', 'OCR provider 가 올바르지 않습니다 (upstage|codex|gemini).');
+    }
+
     let extracted: ocr.ExtractResult;
     try {
-      extracted = await ocr.extract(file.buffer, file.originalname || `upload.${extForMime(detected)}`);
+      extracted = await ocr.extract(file.buffer, file.originalname || `upload.${extForMime(detected)}`, provider);
     } catch {
-      extracted = ocr.failedResult();
+      extracted = ocr.failedResult('ocr-service 응답 없음', 'OCR_UNAVAILABLE', provider);
     }
 
     const vehicle = await vehicles.createFromOcr(extracted);
@@ -51,6 +60,7 @@ malsoRouter.post('/', upload.single('file'), async (req, res, next) => {
       vehicle,
       fields: extracted.fields,
       ocrStatus: extracted.status,
+      ocrProvider: extracted.provider,
       warnings: extracted.warnings,
       errorCode: extracted.errorCode,
     });

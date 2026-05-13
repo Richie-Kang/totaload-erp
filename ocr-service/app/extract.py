@@ -10,10 +10,11 @@ import os
 import re
 import tempfile
 import threading
+from typing import Optional
 
 from PIL import Image
 
-from . import codex_client
+from . import providers
 from .schema import ExtractedFields, ExtractResponse
 
 MAX_DIM = 2000  # downscale long side to ~this (§2.6 image preprocessing)
@@ -27,18 +28,18 @@ _ALL_KEYS = (
 )
 
 _ERR_MAP = {
-    codex_client.CodexUnavailable: "OCR_UNAVAILABLE",
-    codex_client.CodexAuth: "OCR_AUTH",
-    codex_client.CodexRateLimit: "OCR_RATE_LIMIT",
-    codex_client.CodexTimeout: "OCR_TIMEOUT",
-    codex_client.CodexBadOutput: "OCR_BAD_OUTPUT",
+    providers.ProviderUnavailable: "OCR_UNAVAILABLE",
+    providers.ProviderAuth: "OCR_AUTH",
+    providers.ProviderRateLimit: "OCR_RATE_LIMIT",
+    providers.ProviderTimeout: "OCR_TIMEOUT",
+    providers.ProviderBadOutput: "OCR_BAD_OUTPUT",
 }
 
 
-def _failed(error_code: str, raw: str, warnings=None) -> ExtractResponse:
+def _failed(error_code: str, raw: str, warnings=None, provider: Optional[str] = None) -> ExtractResponse:
     return ExtractResponse(
         fields=ExtractedFields(), raw=raw, status="failed",
-        error_code=error_code, warnings=warnings or [],
+        error_code=error_code, warnings=warnings or [], provider=provider,
     )
 
 
@@ -184,37 +185,45 @@ def _parse_and_normalize(obj: dict, raw: str) -> ExtractResponse:
         status = "partial"
     else:
         status = "ok"
-    return ExtractResponse(fields=fields, raw=raw, status=status, warnings=warnings, error_code=None)
+    return ExtractResponse(
+        fields=fields, raw=raw, status=status, warnings=warnings, error_code=None
+    )
 
 
-def extract_from_upload(data: bytes, filename: str) -> ExtractResponse:
+def extract_from_upload(data: bytes, filename: str, provider: Optional[str] = None) -> ExtractResponse:
     filename = filename or ""
+    provider = (provider or "upstage").lower()
     if not data:
-        return _failed("OCR_BAD_IMAGE", "빈 파일")
+        return _failed("OCR_BAD_IMAGE", "빈 파일", provider=provider)
     try:
         img = _load_image(data, filename)
     except Exception as exc:  # noqa: BLE001 — any decode failure -> bad image
-        return _failed("OCR_BAD_IMAGE", f"이미지 열기 실패: {exc}")
+        return _failed("OCR_BAD_IMAGE", f"이미지 열기 실패: {exc}", provider=provider)
 
     tmp_path = None
+    downscaled_bytes: bytes = b""
     try:
         img = _downscale(img)
         fd, tmp_path = tempfile.mkstemp(suffix=".jpg")
         os.close(fd)
         img.save(tmp_path, format="JPEG", quality=90)
+        with open(tmp_path, "rb") as fh:
+            downscaled_bytes = fh.read()
     except Exception as exc:  # noqa: BLE001 — disk full / encode failure
         if tmp_path:
             try:
                 os.unlink(tmp_path)
             except OSError:
                 pass
-        return _failed("OCR_BAD_IMAGE", f"이미지 처리 실패: {exc}")
+        return _failed("OCR_BAD_IMAGE", f"이미지 처리 실패: {exc}", provider=provider)
 
     try:
-        raw = codex_client.run_codex_ocr(tmp_path)
-    except codex_client.CodexError as exc:
+        raw = providers.run_ocr(provider, tmp_path, downscaled_bytes)
+    except ValueError as exc:
+        return _failed("OCR_BAD_OUTPUT", f"unknown provider: {exc}", provider=provider)
+    except providers.ProviderError as exc:
         code = _ERR_MAP.get(type(exc), "OCR_BAD_OUTPUT")
-        return _failed(code, f"{type(exc).__name__}: {exc}")
+        return _failed(code, f"{type(exc).__name__}: {exc}", provider=provider)
     finally:
         try:
             os.unlink(tmp_path)
@@ -223,5 +232,7 @@ def extract_from_upload(data: bytes, filename: str) -> ExtractResponse:
 
     obj = _extract_json(raw)
     if obj is None:
-        return _failed("OCR_BAD_OUTPUT", raw)
-    return _parse_and_normalize(obj, raw)
+        return _failed("OCR_BAD_OUTPUT", raw, provider=provider)
+    result = _parse_and_normalize(obj, raw)
+    result.provider = provider
+    return result

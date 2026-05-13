@@ -70,6 +70,19 @@ MVP 속도 최우선. 외부 의존성·키 최소화(사용자가 이미 가진
 **이유**: 단순.
 **트레이드오프**: 2페이지 이상 등록증 스캔 시 누락 — 실무상 등록증 앞면이 1페이지라 수용.
 
+### ADR-012 — Multi-provider OCR (Upstage primary)
+**결정**: OCR 백엔드를 단일 codex CLI 에서 **3개 provider 선택형**으로 확장. 우선순위는 `upstage` (기본·메인) → `codex` → `gemini`. 사용자가 "말소 입력" 화면 우측 상단의 세그먼트 컨트롤로 매 업로드 단위 선택. provider 추상화는 `ocr-service/app/providers/__init__.py` 의 `run_ocr(provider, image_path, image_bytes) -> str` + 공통 `ProviderError` 계층. 백엔드 `POST /api/malso` 가 multipart `provider` 필드를 받아 ocr-service 의 `/extract?provider=...` 로 그대로 전달. 응답에 `ocrProvider` 포함, `vehicles.raw_ocr.provider` 로 기록 보존.
+**이유**: ① Upstage 인턴 과제(Part 2 비교 분석)의 핵심이 같은 문서를 여러 도구로 처리해 트레이드오프를 보이는 것 — 동일 UI 에서 한 클릭으로 비교 가능하게 만드는 게 가장 정직한 데모. ② 트리닉 운영 환경에서 한국어 등록증의 OCR 품질·속도·인증 풋프린트가 provider 마다 다름. Upstage Document Parse + Solar Chat 2-step 이 한국어 양식과 레이아웃 보존에 강하고, env 1개로 인증되며(`UPSTAGE_API_KEY`) 동기 호출 지연이 codex CLI 보다 낮다. ③ codex 는 기존 사용자 ChatGPT 구독을 그대로 쓸 수 있는 zero-cost 백업, gemini 는 단일 멀티모달 호출의 정직한 베이스라인.
+**Upstage 파이프라인 (2-step)**:
+1. `POST https://api.upstage.ai/v1/document-digitization` (model=`document-parse`, multipart `document`) → 텍스트/HTML 추출.
+2. `POST https://api.upstage.ai/v1/chat/completions` (model=`solar-pro`, `response_format: json_object`, system prompt = 공유 EXTRACTION_PROMPT) → 9-필드 JSON.
+   두 단계 모두 동일 `Authorization: Bearer ${UPSTAGE_API_KEY}` 사용. 두 단계 분리의 가치: OCR 텍스트와 LLM 구조화 결과를 따로 관찰 가능 — 실패 시 어디서 깨졌는지 즉시 가림.
+**Gemini 파이프라인 (1-step)**: `POST generativelanguage…/models/gemini-1.5-flash:generateContent` 에 이미지 inline_data + EXTRACTION_PROMPT + `generationConfig.response_mime_type=application/json`.
+**트레이드오프**: ① provider 마다 인증·한도·지연 특성이 다름 — 운영자가 어느 키를 못 채우면 그 옵션만 비활성화(`ProviderUnavailable` → `OCR_UNAVAILABLE`). ② 동일 prompt 를 쓰지만 LLM 다른 응답 형태(JSON 키 추가/누락)에 모두 대응해야 함 — `extract.py` 의 `_extract_json` + 정규화가 lenient. ③ Upstage 의 Solar Chat 호출이 두 번 일어나므로 토큰 비용/지연이 추가 — 정확도 이득이 그 값을 한다는 게 결정의 기반.
+**대안(검토 후 기각)**: ① Vision API 들을 백엔드에서 직접 호출(추상화 없음) — 비교 데모 가치 사라짐. ② Upstage "Information Extraction" 단일 엔드포인트 — 사용자 지정 스키마 설정·관리 부담이 1-shot 2-step 보다 큼; 가까운 결과를 더 명료한 코드로 얻기 위해 2-step 채택. ③ provider 를 backend 레벨에서 선택(ocr-service 추상화 없음) — provider 별 차이가 backend 에 누수.
+
+---
+
 ### ADR-011 — 파일 저장 = Postgres `bytea` 컬럼 (ADR-006 대체)
 **결정**: 업로드 이미지와 생성된 PDF 의 바이트를 `documents.file_bytes bytea` 컬럼에 직접 저장. 영구 디스크 / 객체 스토리지 미사용. 코드 경로: `routes/malso.ts` → `vehicles.addDocument({file_bytes: Buffer, …})` → INSERT. 다운로드는 `vehicles.getDocumentBytes(id)` → `routes/files.ts` 가 `res.send(bytes)`. `getById` 가 반환하는 `DocumentRow` 에는 `file_bytes` 가 포함되지 않아 목록·상세 조회 시 바이트는 로드되지 않는다.
 **이유**: Render free 플랜이 영구 디스크를 지원하지 않아(ADR-006 의 disk 가 Starter $7/mo 를 강제) 완전 무료 배포가 불가했다. bytea 로 옮기면 backend 도 free 플랜이 되고, DB 한 곳만 관리하면 된다(파일/메타 일관성도 트랜잭션으로 보장). 외부 Postgres(Supabase/Neon free) 와 결합하면 영구 데이터 보존도 30일 만료 없이 가능.

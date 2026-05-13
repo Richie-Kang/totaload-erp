@@ -1,11 +1,16 @@
+import base64
 import io
 import json
+import os
 
 from fastapi.testclient import TestClient
 from PIL import Image
 from pypdf import PdfReader
 
-from app import codex_client, fill_pdf
+from app import fill_pdf, providers
+from app.providers import codex as codex_provider
+from app.providers import gemini as gemini_provider
+from app.providers import upstage as upstage_provider
 from app.extract import extract_from_upload
 from app.fill_pdf import fill
 from app.main import app
@@ -48,8 +53,7 @@ def _field_value(reader: PdfReader, name: str) -> str:
 def test_fill_pdf_field_names_match_template():
     reader = PdfReader(fill_pdf._template_path())
     assert set((reader.get_fields() or {}).keys()) == set(fill_pdf.PDF_FIELD_NAMES)
-    # 'vehicle_year ' must keep its trailing space
-    assert "vehicle_year " in fill_pdf.PDF_FIELD_NAMES
+    assert "vehicle_year " in fill_pdf.PDF_FIELD_NAMES  # trailing space matters
 
 
 def test_fill_pdf_all_fields():
@@ -67,7 +71,6 @@ def test_fill_pdf_all_fields():
     assert _field_value(reader, "vehicle_vin_1") == _field_value(reader, "vehicle_vin_2") == "KL3AB12CD34567890"
     assert _field_value(reader, "vehicle_year ") == "2015"
     assert _field_value(reader, "current_date") == "2026년 5월 13일"
-    # both weight fields receive the consolidated 차량중량 value
     assert _field_value(reader, "vehicle_weight_1") == "1200"
     assert _field_value(reader, "vehicle_weight_2") == "1200"
 
@@ -77,40 +80,45 @@ def test_fill_pdf_defaults_and_missing():
     assert "vehicle_reg_no" in missing and "vehicle_vin_1" in missing
     assert "owner_name" not in missing
     reader = PdfReader(io.BytesIO(pdf_bytes))
-    assert "년" in _field_value(reader, "current_date")  # defaulted to today
-    # total weight falls back to weight
+    assert "년" in _field_value(reader, "current_date")
+    # both weight fields share the single 차량중량
     assert _field_value(reader, "vehicle_weight_2") == "850"
 
 
-# --- defensive output parsing ---------------------------------------------
+# --- defensive output parsing (provider = codex by default in these tests) ---
+
+def _mock_codex(monkeypatch, returner):
+    monkeypatch.setattr(codex_provider, "run_codex_ocr", returner)
+
 
 def test_parse_pure_json(monkeypatch):
-    monkeypatch.setattr(codex_client, "run_codex_ocr", lambda p: _full_json())
-    r = extract_from_upload(_png_bytes(), "cert.png")
+    _mock_codex(monkeypatch, lambda p: _full_json())
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
     assert r.status == "ok"
     assert r.error_code is None
+    assert r.provider == "codex"
     assert r.fields.owner_name == "홍길동"
     assert r.fields.vehicle_mileage == 12000
 
 
 def test_parse_codefence(monkeypatch):
-    monkeypatch.setattr(codex_client, "run_codex_ocr", lambda p: f"```json\n{_full_json()}\n```")
-    r = extract_from_upload(_png_bytes(), "cert.png")
+    _mock_codex(monkeypatch, lambda p: f"```json\n{_full_json()}\n```")
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
     assert r.status == "ok"
     assert r.fields.vehicle_model == "레이"
 
 
 def test_parse_prose_plus_json(monkeypatch):
     blob = f"분석 결과는 다음과 같습니다:\n{_full_json()}\ntokens used: 1234"
-    monkeypatch.setattr(codex_client, "run_codex_ocr", lambda p: blob)
-    r = extract_from_upload(_png_bytes(), "cert.png")
+    _mock_codex(monkeypatch, lambda p: blob)
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
     assert r.status == "ok"
     assert r.fields.vehicle_reg_no == "123가4567"
 
 
 def test_parse_garbage(monkeypatch):
-    monkeypatch.setattr(codex_client, "run_codex_ocr", lambda p: "죄송하지만 이미지를 읽을 수 없습니다.")
-    r = extract_from_upload(_png_bytes(), "cert.png")
+    _mock_codex(monkeypatch, lambda p: "죄송하지만 이미지를 읽을 수 없습니다.")
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
     assert r.status == "failed"
     assert r.error_code == "OCR_BAD_OUTPUT"
     assert all(getattr(r.fields, k) is None for k in ALL_KEYS)
@@ -126,8 +134,8 @@ def test_normalize(monkeypatch):
         vehicle_year="2015년형 차량",
         vehicle_weight="1,050kg",
     )
-    monkeypatch.setattr(codex_client, "run_codex_ocr", lambda p: raw)
-    r = extract_from_upload(_png_bytes(), "cert.png")
+    _mock_codex(monkeypatch, lambda p: raw)
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
     assert r.fields.vehicle_vin == "KL3AB12CD34567890"
     assert r.fields.vehicle_mileage == 12000
     assert r.fields.owner_address == "인천 미추홀구 어딘가로 12"
@@ -137,8 +145,8 @@ def test_normalize(monkeypatch):
 
 
 def test_normalize_bad_number_warns(monkeypatch):
-    monkeypatch.setattr(codex_client, "run_codex_ocr", lambda p: _full_json(vehicle_mileage="없음"))
-    r = extract_from_upload(_png_bytes(), "cert.png")
+    _mock_codex(monkeypatch, lambda p: _full_json(vehicle_mileage="없음"))
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
     assert r.fields.vehicle_mileage is None
     assert r.status == "partial"
     assert any("vehicle_mileage" in w for w in r.warnings)
@@ -147,45 +155,159 @@ def test_normalize_bad_number_warns(monkeypatch):
 # --- extract entrypoint ----------------------------------------------------
 
 def test_extract_bad_image():
-    r = extract_from_upload(b"this is definitely not an image", "fake.jpg")
+    r = extract_from_upload(b"this is definitely not an image", "fake.jpg", provider="codex")
     assert r.status == "failed"
     assert r.error_code == "OCR_BAD_IMAGE"
 
 
 def test_extract_empty_file():
-    r = extract_from_upload(b"", "x.jpg")
+    r = extract_from_upload(b"", "x.jpg", provider="codex")
     assert r.status == "failed"
     assert r.error_code == "OCR_BAD_IMAGE"
 
 
 def test_extract_codex_mocked_partial(monkeypatch):
-    monkeypatch.setattr(
-        codex_client, "run_codex_ocr",
+    _mock_codex(
+        monkeypatch,
         lambda p: json.dumps({"owner_name": "홍길동", "vehicle_vin": None}),
     )
-    r = extract_from_upload(_png_bytes(), "cert.png")
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
     assert r.status == "partial"
     assert r.fields.owner_name == "홍길동"
     assert r.fields.vehicle_vin is None
 
 
-def test_extract_codex_errors(monkeypatch):
+def test_extract_provider_errors(monkeypatch):
     cases = {
-        codex_client.CodexUnavailable: "OCR_UNAVAILABLE",
-        codex_client.CodexAuth: "OCR_AUTH",
-        codex_client.CodexRateLimit: "OCR_RATE_LIMIT",
-        codex_client.CodexTimeout: "OCR_TIMEOUT",
-        codex_client.CodexBadOutput: "OCR_BAD_OUTPUT",
+        providers.ProviderUnavailable: "OCR_UNAVAILABLE",
+        providers.ProviderAuth: "OCR_AUTH",
+        providers.ProviderRateLimit: "OCR_RATE_LIMIT",
+        providers.ProviderTimeout: "OCR_TIMEOUT",
+        providers.ProviderBadOutput: "OCR_BAD_OUTPUT",
     }
     for exc_cls, code in cases.items():
         def _raise(p, exc_cls=exc_cls):
             raise exc_cls("boom")
 
-        monkeypatch.setattr(codex_client, "run_codex_ocr", _raise)
-        r = extract_from_upload(_png_bytes(), "cert.png")
+        monkeypatch.setattr(codex_provider, "run_codex_ocr", _raise)
+        r = extract_from_upload(_png_bytes(), "cert.png", provider="codex")
         assert r.status == "failed"
         assert r.error_code == code
         assert all(getattr(r.fields, k) is None for k in ALL_KEYS)
+
+
+def test_extract_unknown_provider():
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="claude")
+    assert r.status == "failed"
+    assert r.error_code == "OCR_BAD_OUTPUT"
+
+
+# --- upstage provider ------------------------------------------------------
+
+def test_upstage_requires_api_key(monkeypatch):
+    monkeypatch.delenv("UPSTAGE_API_KEY", raising=False)
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="upstage")
+    assert r.status == "failed"
+    assert r.error_code == "OCR_UNAVAILABLE"
+    assert r.provider == "upstage"
+
+
+def test_upstage_two_step_pipeline(monkeypatch):
+    """Document Parse → Solar Chat. Both calls are mocked at the module's httpx.post."""
+    monkeypatch.setenv("UPSTAGE_API_KEY", "test-key")
+
+    calls = []
+
+    class _Resp:
+        def __init__(self, status_code, payload):
+            self.status_code = status_code
+            self._payload = payload
+            self.text = json.dumps(payload)
+        def json(self):
+            return self._payload
+
+    def _fake_post(url, **kwargs):
+        calls.append((url, kwargs))
+        if "document-digitization" in url:
+            return _Resp(200, {"content": {"text": "raw OCR text from doc-parse"}})
+        if "chat/completions" in url:
+            return _Resp(200, {"choices": [{"message": {"content": _full_json()}}]})
+        return _Resp(404, {"error": "unexpected"})
+
+    monkeypatch.setattr(upstage_provider.httpx, "post", _fake_post)
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="upstage")
+    assert r.status == "ok"
+    assert r.provider == "upstage"
+    assert r.fields.owner_name == "홍길동"
+    # confirms 2-step: 1st call = document-parse, 2nd = chat
+    assert "document-digitization" in calls[0][0]
+    assert "chat/completions" in calls[1][0]
+
+
+def test_upstage_auth_error(monkeypatch):
+    monkeypatch.setenv("UPSTAGE_API_KEY", "bad-key")
+
+    class _Resp:
+        status_code = 401
+        text = "unauthorized"
+        def json(self): return {}
+
+    monkeypatch.setattr(upstage_provider.httpx, "post", lambda *a, **kw: _Resp())
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="upstage")
+    assert r.status == "failed"
+    assert r.error_code == "OCR_AUTH"
+
+
+# --- gemini provider -------------------------------------------------------
+
+def test_gemini_requires_api_key(monkeypatch):
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="gemini")
+    assert r.status == "failed"
+    assert r.error_code == "OCR_UNAVAILABLE"
+
+
+def test_gemini_single_call(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    class _Resp:
+        status_code = 200
+        text = ""
+        def json(self):
+            return {
+                "candidates": [
+                    {"content": {"parts": [{"text": _full_json()}]}}
+                ]
+            }
+
+    captured = {}
+
+    def _fake_post(url, **kwargs):
+        captured["url"] = url
+        captured["json"] = kwargs.get("json")
+        return _Resp()
+
+    monkeypatch.setattr(gemini_provider.httpx, "post", _fake_post)
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="gemini")
+    assert r.status == "ok"
+    assert r.provider == "gemini"
+    assert "generativelanguage.googleapis.com" in captured["url"]
+    # image is inline base64
+    parts = captured["json"]["contents"][0]["parts"]
+    assert any("inline_data" in p for p in parts)
+
+
+def test_gemini_rate_limit(monkeypatch):
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    class _Resp:
+        status_code = 429
+        text = "rate limited"
+        def json(self): return {}
+
+    monkeypatch.setattr(gemini_provider.httpx, "post", lambda *a, **kw: _Resp())
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="gemini")
+    assert r.error_code == "OCR_RATE_LIMIT"
 
 
 # --- health ----------------------------------------------------------------
@@ -196,5 +318,37 @@ def test_health():
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
-    assert "codex" in body
-    assert body["codex"] in {"ok", "missing", "unauthenticated", "unknown"}
+    # all three providers reported
+    for key in ("upstage", "codex", "gemini"):
+        assert key in body
+
+
+# --- HTTP /extract end-to-end (provider form field) ------------------------
+
+def test_extract_endpoint_provider_form(monkeypatch):
+    monkeypatch.setenv("UPSTAGE_API_KEY", "test-key")
+    monkeypatch.setattr(
+        upstage_provider, "run_upstage_ocr",
+        lambda image_path, image_bytes: _full_json(),
+    )
+    client = TestClient(app)
+    resp = client.post(
+        "/extract",
+        files={"file": ("cert.png", _png_bytes(), "image/png")},
+        data={"provider": "upstage"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["provider"] == "upstage"
+
+
+def test_extract_endpoint_rejects_unknown_provider():
+    client = TestClient(app)
+    resp = client.post(
+        "/extract",
+        files={"file": ("cert.png", _png_bytes(), "image/png")},
+        data={"provider": "claude"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["error"]["code"] == "BAD_PROVIDER"

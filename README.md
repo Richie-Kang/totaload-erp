@@ -1,106 +1,234 @@
-# Totaload — 중고차 수출 ERP
+# Totaload — Used-Car Export ERP
 
-자동차등록증 이미지 → 말소등록 신청서 PDF 자동 작성 + 차량/서류 검색.
-설계 문서: [`docs/PRD.md`](docs/PRD.md) · [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/ADR.md`](docs/ADR.md) · [`docs/UI_GUIDE.md`](docs/UI_GUIDE.md).
+A working MVP for **TRYNIC**, a Korean used-car exporter. Drop a photo of a Korean vehicle
+registration certificate (자동차등록증) and the app fills the **mandatory deregistration form
+(말소등록 신청서)** automatically — then prints, stores, and lets you search past records.
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Richie-Kang/totaload-erp)
+---
 
-구성: `frontend/` (React+Vite+TS), `backend/` (Node+Express+TS), `ocr-service/` (Python+FastAPI), `assets/` (PDF 템플릿·샘플). 업로드 이미지와 생성된 PDF 는 Postgres `documents.file_bytes` 컬럼에 저장된다(ADR-011).
+## 🟢 Try it now (no install)
 
-## 로컬 실행 (Docker)
+### **→ [https://totaload-frontend.onrender.com](https://totaload-frontend.onrender.com)**
+
+It's a single web app — no signup. The first request after idle takes ~30–60s (free-tier cold
+start), every request after that is fast.
+
+**30-second walkthrough**
+
+1. Open the link above. Wait for the sidebar to render.
+2. Click **"말소 입력"** (Deregistration input) in the left sidebar.
+3. Drop one of these sample registration certificates onto the dropzone, or your own JPG/PNG/PDF:
+   - [assets/samples/자동차등록증_레이.jpg](assets/samples/자동차등록증_레이.jpg)
+   - [assets/samples/20251203_자동차등록증.jpg](assets/samples/20251203_자동차등록증.jpg)
+4. Watch the form auto-fill from OCR. **Switch the OCR engine in the top-right (Upstage · Codex · Gemini)** and re-drop the same file to compare speed and field accuracy.
+5. Click **"말소등록 신청서 PDF 만들기"** → preview → download the filled official form.
+6. Open **"말소 검색"** in the sidebar to find the vehicle by plate or VIN, or delete the test record.
+
+[![Deploy your own to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Richie-Kang/totaload-erp)
+
+---
+
+## What this is
+
+The official 말소등록 application is a 12-field government PDF (별지 제17호서식). Today the
+operator transcribes those 12 fields by hand from a paper registration certificate — slow and
+error-prone. This MVP:
+
+1. Accepts the registration certificate as image or PDF.
+2. Runs OCR + structured extraction (Upstage / Codex / Gemini, selectable).
+3. Fills the 12 PDF form fields, including the trailing-space `vehicle_year ` field and the
+   duplicate VIN on page 2 + the right-middle weight box.
+4. Lets the operator review/edit before printing (the human, not the model, is the source of truth).
+5. Stores the original cert + the generated PDF on the vehicle record, and exposes a fast partial-match
+   search over plate / VIN.
+
+Target: **< 1 minute per vehicle, end-to-end.**
+
+## Why Upstage is the primary OCR
+
+Upstage is the default OCR engine, listed first in the picker, because of three concrete fits
+for this workload:
+
+1. **Korean-document quality.** A real registration certificate has a dense Korean layout —
+   numeric labels (`주행거리`, `차량총중량`), mixed Hangul + ASCII (plate `123가4567`, VIN `KL3AB12CD34567890`),
+   and frequent rotation / shadow on phone snapshots. Upstage Document Parse is trained for
+   exactly this regime; it returns layout-aware text rather than a flat blob.
+2. **2-step pipeline that we can reason about.** The Upstage provider here is `Document Parse →
+   Solar Chat`. Step 1 extracts the text and layout; step 2 asks Solar to coerce that text into
+   our fixed 9-field JSON schema. Each step is observable on its own — if the structured output
+   is wrong, we can inspect the raw OCR text and tell whether OCR or the LLM is at fault.
+3. **Lower latency than a CLI vision call.** Codex (`codex exec -i image`) routes through a CLI
+   process and an LLM-style reasoning pass; the per-image cost is dominated by the model's
+   thinking budget. Upstage's document endpoint is a normal HTTP API — measurably faster on
+   typical certificate images.
+
+The Gemini and Codex providers are kept because they're useful baselines for a Part 2
+comparison: Gemini for "what does a frontier multimodal model do in one shot?" and Codex
+for "what does an LLM-vision CLI do with no provider-specific tuning?".
+
+## Architecture
+
+```
+   Browser (React + Vite SPA)
+        │  /api/*  (same-origin, nginx reverse-proxy)
+        ▼
+   Backend (Express + TS)  ──► Postgres (Supabase free)
+        │                       └─ vehicles + documents.file_bytes (bytea)
+        │
+        ▼  POST /extract  (provider=upstage|codex|gemini)
+   OCR service (FastAPI)
+        ├─ providers/upstage.py   → POST document-digitization → POST chat/completions
+        ├─ providers/codex.py     → subprocess codex exec -i …
+        └─ providers/gemini.py    → POST generativelanguage… generateContent
+        │
+        └─ POST /fill-pdf  →  pypdf fills the 12-field AcroForm template
+```
+
+The provider abstraction is a thin contract in
+[`ocr-service/app/providers/__init__.py`](ocr-service/app/providers/__init__.py): every provider
+exposes `run_ocr(image_path, image_bytes) -> str` and surfaces a typed `ProviderError`
+(`Unavailable / Auth / RateLimit / Timeout / BadOutput`). Adding a fourth provider is a single
+file plus one line in the dispatcher.
+
+**Why no S3 / object storage?** Free-tier deploy. Document bytes live in
+`documents.file_bytes bytea`. The trade-off and the migration path are spelled out in
+[ADR-011](docs/ADR.md#adr-011).
+
+## Comparing OCR providers
+
+Same image, three engines, one normalized output. To run a comparison live:
+
+1. Open [https://totaload-frontend.onrender.com](https://totaload-frontend.onrender.com).
+2. Drop the same sample certificate three times, toggling the engine in the top-right between
+   `Upstage` → `Codex` → `Gemini`. Each upload creates an independent vehicle record (the
+   provider used is stored in the `raw_ocr.provider` field for that vehicle).
+3. Compare wall-clock time (visible in the banner), the per-field accuracy, and how each engine
+   handles a stress sample (low-light, rotated, redacted SSN, etc.).
+
+For an offline comparison, the same 3 providers can be exercised in tests — see
+`ocr-service/tests/test_ocr.py` (mocked httpx calls).
+
+## Stack & decisions
+
+- **Language**: TypeScript everywhere on the JS side (strict). Python for OCR / PDF.
+- **Frontend**: React 18 + Vite 6 + Tailwind + react-router 7 + @tanstack/react-query 5.
+- **Backend**: Express + `pg` (no ORM — schema is small, SQL is honest).
+- **OCR service**: FastAPI + httpx + pypdf + pypdfium2. Per-provider clients are isolated
+  modules.
+- **DB**: PostgreSQL 16. Migrations are idempotent SQL run on boot (`backend/src/db/schema.sql`).
+- **Deploy**: Render Blueprint, all services on the free plan; database is external (Supabase or
+  Neon free).
+- **Tests**: 24 pytest tests in `ocr-service` (providers + parsing + fill-pdf), 14 supertest tests
+  in `backend` (real Postgres), 11 vitest tests in `frontend`. All run on every push.
+
+The architectural reasoning for each non-obvious choice lives in [`docs/ADR.md`](docs/ADR.md) —
+ADR-002 (OCR via local LLM), ADR-005 (Render Blueprint), ADR-011 (bytea storage),
+ADR-012 (multi-provider OCR — Upstage primary), etc.
+
+## Repo layout
+
+```
+frontend/        React SPA
+backend/         Express API (multipart upload → OCR call → DB → fill-pdf)
+ocr-service/     FastAPI + providers/{upstage,codex,gemini}.py + fill_pdf.py
+assets/          Official PDF template + sample registration certs
+docs/            PRD · ARCHITECTURE · ADR · UI_GUIDE
+phases/          The harness phases this repo was built through (0-mvp, 1-multi-ocr)
+render.yaml      Free-plan Blueprint (frontend / backend / ocr-service)
+```
+
+---
+
+## 로컬 실행 / Local development
 
 ```bash
 cp .env.example .env
-# (선택) OCR 을 쓰려면 호스트에서 먼저 codex 로그인 — ~/.codex/auth.json 생성:
-codex login
+# Optional — set UPSTAGE_API_KEY (primary), GEMINI_API_KEY, CODEX_AUTH_JSON in .env
 docker compose up --build
 # -> http://localhost:5173   (backend :4000, ocr-service :8000, postgres :5432)
 ```
 
-`docker compose up` 이 postgres + ocr-service + backend + frontend 를 고정 포트로 띄운다. backend 는 부팅 시 DB 마이그레이션을 돌린 뒤 listen 한다. frontend(nginx)가 `/api` 를 backend 로 리버스 프록시하므로 브라우저는 `http://localhost:5173` 한 오리진만 본다. `codex login` 을 안 했어도 앱은 동작하고 OCR 만 비활성된다(`GET /api/health` 의 `ocr` 필드로 확인). 호스트에 `~/.codex` 가 없으면 compose 가 빈 디렉터리를 만든다 — OCR 만 비활성될 뿐 문제 없다.
+`docker compose up` 이 postgres + ocr-service + backend + frontend 를 고정 포트로 띄운다.
+Backend 는 부팅 시 DB 마이그레이션을 돌린 뒤 listen 하고, frontend(nginx)가 `/api` 를 backend
+로 리버스 프록시하므로 브라우저는 `http://localhost:5173` 한 오리진만 본다. 어떤 OCR API 키도
+설정 안 했어도 앱은 동작한다 — 폼은 수동 입력으로 쓸 수 있고 `/api/health` 가 각 provider 의
+readiness 를 보여준다.
 
-헬스 체크:
+Health checks:
 
 ```bash
-curl -fsS http://localhost:4000/api/health   # {"status":"ok","db":"ok","ocr":"ok"}
-curl -fsS http://localhost:8000/health        # {"status":"ok","codex":"ok|unauthenticated|missing"}
+curl -fsS http://localhost:4000/api/health    # {"status":"ok","db":"ok","ocr":"ok"}
+curl -fsS http://localhost:8000/health         # per-provider readiness (upstage/codex/gemini)
 ```
 
-### Docker 없이 (워크스페이스 단위)
+### Without Docker (workspaces)
 
 ```bash
 npm install
-npm run build          # frontend + backend 컴파일
+npm run build          # frontend + backend
 npm run lint
-npm run test           # frontend/backend 테스트 + ocr-service pytest
+npm run test           # frontend vitest + backend vitest + ocr-service pytest
 
-npm run dev -w frontend     # http://localhost:5173 (개발 서버; /api 요청은 BACKEND_URL 또는 :4000 으로 프록시)
-npm run dev -w backend      # http://localhost:4000  (postgres + .env 의 DATABASE_URL 필요)
-cd ocr-service && python3 -m pip install -r requirements.txt && python3 -m uvicorn app.main:app --reload   # http://localhost:8000/health
+npm run dev -w frontend     # http://localhost:5173 (proxy /api -> BACKEND_URL or :4000)
+npm run dev -w backend      # http://localhost:4000  (needs DATABASE_URL)
+cd ocr-service && python3 -m pip install -r requirements.txt && \
+  python3 -m uvicorn app.main:app --reload    # http://localhost:8000/health
 ```
 
-환경변수는 `.env.example` 참고(`cp .env.example .env`).
+## 배포 / Deployment (Render Blueprint, free)
 
-## 수동 UX 체크리스트 (frontend)
+All three services are free plan. Postgres is external (Render free Postgres expires after 30
+days). File bytes live in `documents.file_bytes` so no persistent disk is needed (ADR-011).
 
-backend(+postgres) 와 ocr-service(또는 모킹) 가 떠 있는 상태에서 `npm run dev -w frontend` 후 http://localhost:5173 :
-
-1. `/malso/new` 에서 샘플 등록증 드롭 → 즉시 2열·빈 폼·"분석 중" 배너; 그 사이 '주행거리(km)'에 값 입력 → 응답 도착 시 '주행거리'는 사용자 값 유지, 나머지 빈 칸만 OCR 값으로 채워짐; URL 이 `/malso/:id` 로 바뀜.
-2. 그 페이지 새로고침 → `/malso/:id` 로 복구, 입력값 보존; `/malso/new` 의 "작성 중" 목록에도 그 차량이 보임.
-3. 좌측 이미지 확대/이동/90° 회전 동작.
-4. 필드 수정 → "저장됨 HH:MM" 표시; 백엔드를 잠깐 죽이면 저장 실패 경고 + 라우트 이탈(탭 닫기) 시 confirm.
-5. "말소등록 신청서 PDF 만들기" → 미리보기 모달 → 다운로드/인쇄; 중요한 필드 비우고 시도 → confirm 후 빈 채로 생성 + 누락 안내 토스트.
-6. `/malso/search` 에서 차량번호/차대번호 일부 입력 → 디바운스 검색, 매칭 하이라이트; 검색어 비우면 "최근 차량"; 없는 값 → 0건 메시지; 결과/목록에 주민번호 안 보임; 행 클릭 → 상세.
-7. 상세에서 주민등록번호 칸 마스킹 + 눈 아이콘 토글.
-8. 키보드(Tab/Enter/Esc)만으로 업로드→입력→PDF 생성까지 가능.
-
-## 배포 (Render Blueprint, 무료)
-
-세 Render 서비스(frontend/backend/ocr)는 모두 free 플랜. Postgres 는 **외부 무료 호스트**(Supabase 또는 Neon)를 쓴다 — Render 의 free Postgres 가 30일 후 삭제되는 정책을 피하기 위해서다. 파일 바이트는 DB 컬럼(`documents.file_bytes`)에 보관하므로 영구 디스크가 필요 없다(ADR-011).
-
-1. **Postgres 준비** — [Supabase](https://supabase.com) 또는 [Neon](https://neon.tech) 무료 프로젝트 생성 → **Connection String** 복사. 형태 예:
-   - Supabase: `postgresql://postgres.xxxxx:<PWD>@aws-0-<region>.pooler.supabase.com:6543/postgres?sslmode=require` (Transaction pooler, port **6543**)
-   - Neon: `postgresql://<user>:<pwd>@ep-xxxx.<region>.aws.neon.tech/neondb?sslmode=require`
-   - 두 경우 모두 끝에 `?sslmode=require` 가 있어야 한다.
-2. **GitHub 푸시** — 이 리포가 이미 GitHub 에 올라가 있어야 한다(README 상단의 1-click 버튼이 그것을 가리킨다).
-3. **Blueprint 적용** — Render 대시보드 → **New** → **Blueprint** → 이 리포 선택 → `render.yaml` 자동 인식 → Apply. 생성되는 것: `totaload-frontend`(web, free, Docker — nginx 가 SPA 서빙 + `/api` → backend 프록시), `totaload-backend`(web, free, Docker), `totaload-ocr`(web, free, Docker — codex CLI 포함). DB 서비스는 만들지 않는다.
-4. **환경변수 설정** — `sync: false` 인 두 값을 대시보드에서 입력:
-   - `totaload-backend` → `DATABASE_URL` = (1) 의 Connection String
-   - `totaload-ocr` → `CODEX_AUTH_JSON` = 로컬 `~/.codex/auth.json` 의 **내용 전체**(`pbcopy < ~/.codex/auth.json` 으로 복사 후 붙여넣기)
-   - 둘 다 입력하면 두 서비스가 자동 재배포된다.
-5. **헬스 체크**:
+1. **External Postgres** — create a project on [Supabase](https://supabase.com) or
+   [Neon](https://neon.tech) and copy the Transaction-pooler connection string.
+   - Supabase: `postgresql://postgres.<ref>:<PWD>@aws-…pooler.supabase.com:6543/postgres?sslmode=require`
+   - Neon: `postgresql://<user>:<pwd>@ep-…neon.tech/neondb?sslmode=require`
+2. **Push to GitHub** (this repo already lives at
+   [github.com/Richie-Kang/totaload-erp](https://github.com/Richie-Kang/totaload-erp)).
+3. **Apply Blueprint** — Render → New → Blueprint → pick this repo → `render.yaml` auto-detected
+   → Apply. Creates `totaload-frontend`, `totaload-backend`, `totaload-ocr` on free plan.
+4. **Fill the four `sync: false` env vars** in the dashboard:
+   - `totaload-backend` → `DATABASE_URL` = the connection string from (1).
+   - `totaload-ocr` → `UPSTAGE_API_KEY` = from https://console.upstage.ai (primary).
+   - `totaload-ocr` → `GEMINI_API_KEY` = from https://aistudio.google.com/apikey (secondary).
+   - `totaload-ocr` → `CODEX_AUTH_JSON` = contents of your local `~/.codex/auth.json`
+     (`pbcopy < ~/.codex/auth.json`).
+5. **Health check**:
    ```bash
    curl -fsS https://totaload-backend.onrender.com/api/health
    # -> {"status":"ok","db":"ok","ocr":"ok"}
+   curl -fsS https://totaload-ocr.onrender.com/health
+   # -> { "upstage": "configured", "codex": "...", "gemini": "configured" }
    ```
-   서비스명에 충돌로 접미사가 붙었으면 대시보드의 실제 URL 을 쓰고, `OCR_SERVICE_URL` / `CORS_ORIGIN` / `BACKEND_URL` 도 함께 고쳐라.
 
-`CODEX_AUTH_JSON` 을 안 넣어도 앱은 동작한다 — OCR 만 비활성되고 폼은 수동 입력으로 쓸 수 있다.
+Any single missing key only disables that provider — the other two still work.
 
-## 보안
+## 보안 / Security notes
 
-- **주민등록번호(SSN)는 평문 저장**(MVP, 로그인 없음) — 목록/검색에 미노출, 상세 화면에서 마스킹 + 눈 아이콘 토글. 외부 노출에 주의하라; 향후 컬럼 암호화·접근제어가 필요하다.
-- `CODEX_AUTH_JSON` 은 ChatGPT 계정 자격증명이다 — 안전하게 관리하고 리포/`render.yaml`/Dockerfile 에 절대 커밋하지 마라(`sync: false` / env / `.env`). `DATABASE_URL` 도 env(Render `fromDatabase`)로만 주입된다.
-- codex 토큰 만료 시: 로컬에서 `codex login` 으로 `~/.codex/auth.json` 을 갱신 → 그 내용을 `totaload-ocr` 의 `CODEX_AUTH_JSON` 에 다시 설정 → 재배포.
-- `DATABASE_URL` 도 `sync: false` 라 리포에 안 들어간다(Supabase/Neon 대시보드에서 비밀번호 노출 주의).
+- **주민등록번호 (resident registration number) 평문 저장**. MVP — no auth (ADR-004). Search/list
+  responses never include it; PDF generation does. Production usage would need column-level
+  encryption + access control.
+- All credentials (`UPSTAGE_API_KEY`, `GEMINI_API_KEY`, `CODEX_AUTH_JSON`, `DATABASE_URL`) live in
+  env only (`sync: false` in Render, gitignored locally). The repo contains no keys.
 
-## 한계 (Known limitations)
+## 한계 / Known limitations
 
-MVP 범위에서 의도적으로 두지 않은 것 / 알려진 제약 (자세한 배경은 `docs/ADR.md`):
+- **No auth / RBAC / audit log** (ADR-004). Intended for internal small-team use.
+- **OCR is not a guarantee.** All three providers can hallucinate; the operator is the final
+  reviewer. The system never blocks the workflow on OCR failure — manual entry always works.
+- **PDF upload OCRs only page 1** (ADR-010). Multi-page scans use the front page; back-side
+  attachments are kept for reference.
+- **Synchronous OCR call** with a 90s timeout (ADR-009). Async job queue is future work.
+- **No concurrent-edit detection** — last-write-wins (acceptable at this scale).
+- **File storage = Postgres bytea** (ADR-011). Supabase free is 500 MB ≈ 200–250 vehicles. Beyond
+  that, migrate to R2/S3 (one file in `services/vehicles.ts` and a column rename).
 
-- **로그인·권한 없음** — 누구나 접근 가능(ADR-004). 주민등록번호는 평문 저장(목록/검색 미노출, 상세에서 마스킹+토글). 사내·소규모 사용 전제. 향후 인증·컬럼 암호화 필요.
-- **OCR 정확도 보장 안 함** — codex(LLM 비전) 출력은 비결정적이고 환각 가능. 사람의 검수가 최종 책임이며, 시스템은 OCR 실패로 업무를 막지 않는다(항상 수동 입력 폴백).
-- **입력 PDF 는 첫 페이지만 OCR** — 멀티페이지 스캔이면 1페이지만 인식(ADR-010). 등록증 앞면이 1페이지라 실무상 수용.
-- **첨부 이미지가 여러 장이어도 OCR 은 첫 장만** — 나머지는 보기·참고용. 재인식은 "다시 분석"으로 명시적으로.
-- **OCR 동기 처리** — 업로드 요청이 codex 완료까지 대기(타임아웃 90초). 잡 큐 비동기화는 향후 과제(ADR-009).
-- **동시 편집 충돌 감지 없음** — 같은 차량을 둘이 동시에 고치면 last-write-wins(ADR-004 규모 수용).
-- **파일 저장 = Postgres `bytea`** — S3 아님(ADR-011). DB 용량 한도가 곧 저장 한도(Supabase free 500MB ≈ 차량 200~250건). 한도 근접 시 R2/S3 로 옮기는 것이 다음 과제.
-- **재고관리·매입매출·정산·수출신고·통계·알림·다국어 없음** — `docs/PRD.md §8` 참조.
-- **모바일 전용 UI 아님** — 데스크톱 2열 우선, 좁은 화면은 best-effort(깨지지만 않게).
-- **`DELETE /api/malso/:id` 미구현** — 잘못 만든 레코드 정리 수단 없음(PRD §10).
+## 운영 메모 / Ops notes
 
-## 운영 메모
-
-- **DB 용량**: 파일 바이트가 DB 에 들어가므로 Supabase/Neon 대시보드의 사용량을 가끔 본다. Supabase free 500MB / Neon free 0.5~3GB. 한도 근접 시 R2/S3 로 마이그레이션(향후 과제, ADR-011 부록).
-- **DB 백업**: Supabase/Neon 의 자동 백업 정책을 확인하라(무료 티어는 한정적). 중요 데이터는 별도 `pg_dump` 운영(MVP 범위 밖).
-- **콜드 스타트**: free 플랜 web 서비스는 ~15분 idle 후 슬립 → 첫 요청이 30~60초 걸린다. ocr 가 슬립이면 `/api/health` 의 `ocr` 가 잠시 `down`, 첫 업로드가 실패할 수 있다(재시도). 항상 깨어 있게 하려면 UptimeRobot 등으로 5분마다 헬스 핑을 걸거나 backend 만 starter($7/mo) 로 올린다.
+- **DB capacity**: file bytes consume DB storage. Keep an eye on Supabase/Neon usage.
+- **Cold start**: free-plan web services sleep after ~15 min of idle → first request takes 30–60
+  s while three containers wake up. UptimeRobot pinging `/api/health` every 5 min mitigates this,
+  or upgrade `totaload-backend` to Starter ($7/mo).
+- **Codex token expiry**: rerun `codex login` locally → repaste `~/.codex/auth.json` into
+  `CODEX_AUTH_JSON` → redeploy ocr service.

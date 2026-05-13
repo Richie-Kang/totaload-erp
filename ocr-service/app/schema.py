@@ -23,6 +23,7 @@ class ExtractResponse(BaseModel):
     status: Literal["ok", "partial", "failed"]
     warnings: list[str] = []
     error_code: Optional[str] = None  # OCR_UNAVAILABLE | OCR_AUTH | OCR_RATE_LIMIT | OCR_TIMEOUT | OCR_BAD_OUTPUT | OCR_BAD_IMAGE | None
+    provider: Optional[str] = None    # 'upstage' | 'codex' | 'gemini'
 
 
 class FillPdfRequest(BaseModel):

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { OcrFields, OcrStatus, Vehicle, VehicleField } from '../api/types';
+import type { OcrFields, OcrProvider, OcrStatus, Vehicle, VehicleField } from '../api/types';
 import { usePatchVehicle } from '../api/hooks';
 import { ApiError } from '../api/client';
 import { mergeOcrFields, missingOcrLabels, type FormValues } from '../lib/merge';
@@ -64,7 +64,13 @@ interface Props {
   initialVehicle: Vehicle | null; // server row (state C) or null (fresh upload, state B)
   analyzing: boolean; // OCR in progress -> blue banner + "분석 취소"
   onCancelAnalyze?: () => void;
-  ocrResult: { status: OcrStatus; warnings: string[]; errorCode: string | null; fields: OcrFields } | null;
+  ocrResult: {
+    status: OcrStatus;
+    warnings: string[];
+    errorCode: string | null;
+    fields: OcrFields;
+    provider?: OcrProvider;
+  } | null;
   onReanalyze?: () => void;
   onAttachMore?: () => void;
   applyOcr: ApplyOcr | null;
@@ -187,18 +193,25 @@ export function VehicleForm({
         text: '등록증을 분석하고 있습니다… 결과가 나오면 빈 칸이 자동으로 채워집니다. 그동안 아는 값을 먼저 입력해도 됩니다.',
       };
     if (!ocrResult || bannerClosed) return null;
+    const tag = providerLabel(ocrResult.provider);
     if (ocrResult.status === 'ok')
-      return { tone: 'green' as const, text: '자동 입력 완료 — 값을 등록증과 대조해 확인하세요.', closable: true };
+      return {
+        tone: 'green' as const,
+        text: `자동 입력 완료 — 값을 등록증과 대조해 확인하세요.${tag ? ` (by ${tag})` : ''}`,
+        closable: true,
+      };
     if (ocrResult.status === 'partial') {
       const miss = missingOcrLabels(ocrResult.fields);
       return {
         tone: 'amber' as const,
-        text: `일부 항목만 자동 입력했습니다. 빈 칸을 등록증을 보고 채워 주세요.${miss.length ? ` (누락: ${miss.join(', ')})` : ''}`,
+        text:
+          `일부 항목만 자동 입력했습니다. 빈 칸을 등록증을 보고 채워 주세요.${miss.length ? ` (누락: ${miss.join(', ')})` : ''}` +
+          (tag ? ` (by ${tag})` : ''),
       };
     }
     return {
       tone: 'amber' as const,
-      text: `자동 입력에 실패했습니다${ocrResult.errorCode ? ` (사유: ${ocrResult.errorCode})` : ''}. 등록증을 보고 직접 입력해 주세요.`,
+      text: `자동 입력에 실패했습니다${ocrResult.errorCode ? ` (사유: ${ocrResult.errorCode})` : ''}${tag ? ` · ${tag}` : ''}. 등록증을 보고 직접 입력해 주세요.`,
       retry: true,
     };
   }, [analyzing, ocrResult, bannerClosed]);
@@ -334,6 +347,11 @@ export function VehicleForm({
       </div>
     </div>
   );
+}
+
+function providerLabel(p: OcrProvider | undefined): string {
+  if (!p) return '';
+  return ({ upstage: 'Upstage', codex: 'Codex', gemini: 'Gemini' } as const)[p];
 }
 
 // OCR field name -> Vehicle field name (kept local to avoid an extra import cycle).
