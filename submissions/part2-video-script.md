@@ -1,77 +1,78 @@
 # Part 2 · Competitive Analysis — 3-minute screen-recording script
 
-**Duration target:** 3:00 (~430 spoken words at 145 wpm).
-**Audience:** an enterprise customer evaluating OCR vendors for a Korean document-heavy workflow.
-**On screen:** [https://totaload-frontend.onrender.com](https://totaload-frontend.onrender.com) in one tab, the HTML comparison deck (`submissions/competitor-comparison.html`) in a second tab.
+**Duration target:** 3:00 (~330 spoken words at ~130 wpm — relaxed pace, room to breathe).
+**Audience:** an enterprise customer choosing an OCR vendor for Korean documents.
+**On screen:** [https://totaload-frontend.onrender.com](https://totaload-frontend.onrender.com) in one tab, the comparison deck (`submissions/competitor-comparison.html`) in a second tab.
 
-Stage directions are in `[brackets]`. Spoken lines are the lines you read.
-
----
-
-### [0:00 – 0:20] Open · the customer problem
-
-`[Tab 1: Totaload OCR — sidebar visible, "말소 입력" highlighted. Drag the sample certificate over the dropzone but don't drop yet.]`
-
-> **"Hi. I'm going to walk you through a real customer scenario — picking an OCR provider for a Korean used-car exporter. They process about thirty vehicles a day. Each one requires the operator to hand-transcribe twelve fields from a paper registration certificate into a government deregistration form. We need an OCR that can do that in under ten seconds, every time, including the Korean resident-registration number and a corporate owner address. I evaluated three: Upstage Document Parse, OpenAI Codex with vision, and Google Gemini 2.5 Flash."**
+Stage directions are in `[brackets]`. Spoken lines are what you read.
 
 ---
 
-### [0:20 – 0:45] Setup · same image, three engines
+### [0:00 – 0:20] Open · the problem
 
-`[Highlight the OCR-engine selector in the top-right of the page. Hover over each of the three logos in turn.]`
+`[Tab 1: Totaload OCR — sidebar visible. Drag the sample certificate over the dropzone, don't drop yet.]`
 
-> **"What you're looking at is Totaload OCR. The same upload can be processed by any of three providers — Upstage, Codex, or Gemini — and the result feeds the same downstream PDF. So the only variable in this comparison is the OCR engine."**
-
----
-
-### [0:45 – 1:20] Upstage demo
-
-`[Select "Upstage". Drop assets/samples/자동차등록증_레이.jpg. Stay silent for the ~3.5s spinner. When the form auto-fills, point at three specific fields with the cursor: owner_name, owner_ssn, owner_address.]`
-
-> **"Three and a half seconds. Nine fields populated. The VIN is seventeen characters as the spec requires. The resident-registration number is in 6-7 format, and notice that the owner name and the address are correctly split — even on the corporate certificate where they're printed on the same line in the source document.
-> Behind the scenes, Upstage runs a two-step pipeline: Document Parse extracts layout-aware text, then Solar Chat structures it into our JSON schema. We get deterministic JSON, every time, and the Korean form labels are recognized natively."**
+> **"Hi. I'd like to show you how I picked the best OCR for a real customer — a Korean used-car export company. Every day, a worker types twelve fields from a paper registration into a government form. About thirty cars a day. We need an OCR that finishes in under ten seconds, every time. I tested three: Upstage, OpenAI Codex, and Google Gemini."**
 
 ---
 
-### [1:20 – 1:50] Codex demo
+### [0:20 – 0:35] Setup · same image, three engines
 
-`[Switch the engine to "Codex". Drop the same certificate. While the ~25-second wait happens, narrate over the spinner.]`
+`[Hover over the OCR-engine selector in the top-right. Show all three logos.]`
 
-> **"Same image, switching to OpenAI Codex. Codex is the GPT-5 family's vision CLI, billed through a ChatGPT subscription.
-> ...about twenty-five seconds. It found most of the fields, but the latency is a deal-breaker for an operator doing thirty cars a day. And the authentication model — bundling a personal `auth.json` into a server container — is a non-starter for any production deployment. We use Codex as a free fallback, not as a primary."**
+> **"This is Totaload OCR. The same upload can run through any of the three engines. Same image, same form. The only thing changing is the OCR engine."**
 
 ---
 
-### [1:50 – 2:25] Gemini demo
+### [0:35 – 1:10] Upstage demo
+
+`[Pick "Upstage". Drop assets/samples/자동차등록증_레이.jpg. Wait quietly for ~3.5s. When the form fills, point at three fields: owner_name, owner_ssn, owner_address.]`
+
+> **"Let me try Upstage first.
+> ...Three and a half seconds. All nine fields are filled in. The VIN is correct, the ID number is in the right format, and notice — the owner's name and the address are split correctly, even though they're printed on the same line in the original document.
+> Upstage works in two steps. First it reads the document. Then a second model turns the text into clean JSON. Same result every time."**
+
+---
+
+### [1:10 – 1:40] Codex demo
+
+`[Switch to "Codex". Drop the same image. While the ~25s wait happens, narrate slowly over the spinner.]`
+
+> **"Same image, this time with OpenAI Codex.
+> ...About twenty-five seconds. Way too slow for someone doing thirty cars a day. And to make it run on a server, you have to mount a personal login file inside the container. That's not okay for a real product. So I keep Codex only as a backup."**
+
+---
+
+### [1:40 – 2:10] Gemini demo
 
 `[Switch to "Gemini". Drop the same image. Should return in ~2-3s.]`
 
-> **"Last one. Gemini 2.5 Flash, a single multimodal call. Two and a half seconds — the fastest of the three.
-> But here's the catch you'd hit in production: Gemini's default safety filters block this image outright. Korean registration certificates carry resident-registration numbers and home addresses, which trigger the PII heuristics. To get this demo working, we had to set every safety category to `BLOCK_NONE`. For a compliance-heavy customer — a bank, an insurer, a government processor — that's a hard sell."**
+> **"Last one — Google Gemini. Two and a half seconds. The fastest of the three.
+> But there's a catch. Gemini's safety filters block this image by default. Korean registration papers include ID numbers and home addresses — the filter sees those as sensitive. To make it work I had to turn off every safety category. For a bank or an insurance company, that's a serious problem."**
 
 ---
 
-### [2:25 – 2:55] Trade-offs · the comparison deck
+### [2:10 – 2:40] Trade-offs · the comparison deck
 
-`[Switch to Tab 2 — the HTML comparison deck. Let the viewer see the full table for ~3 seconds, then point at the highlighted "Upstage wins" rows.]`
+`[Switch to Tab 2 — the comparison deck. Let the viewer see the full table for ~3 seconds, then point at the "Upstage wins" rows.]`
 
-> **"Putting them side by side: Gemini wins raw latency but needs explicit safety overrides for any document with PII. Codex is the cheapest if you already pay for ChatGPT, but at twenty-plus seconds per cert it's too slow for a desk operator. Upstage wins on what actually matters for this customer — it's deterministic, it's fast enough, it's trained on Korean documents out of the box, and the integration is one API key. No subprocess, no safety overrides, no `auth.json` mounts."**
+> **"So which one wins?
+> Gemini is fast, but you have to turn off safety filters. Codex is cheap if you already pay for ChatGPT, but too slow. Upstage is the right choice here. It's consistent. It's fast enough. It's trained on Korean documents. And setup is just one API key — no extra files, no safety overrides."**
 
 ---
 
-### [2:55 – 3:00] Close
+### [2:40 – 3:00] Close
 
 `[Cursor back on the Upstage logo in Tab 1.]`
 
-> **"For this customer, Upstage isn't a tie. It's the only one we'd put in front of operators on day one. Thanks for watching."**
+> **"For this customer, Upstage isn't just one option of three. It's the only one I'd put in front of a real worker on day one. Thanks for watching."**
 
 ---
 
 ## Recording checklist
 
-- [ ] Cold-start warmup: open both tabs and process **one throwaway upload per provider** five minutes before recording so the Render free-tier containers are warm. Otherwise the first upload will hit a 30–60 s cold start.
-- [ ] Display: 1080p+ (1440p preferred), 16:9, dark menu bar off, browser zoom 110–125% so text reads on playback.
-- [ ] Mic check, then a quiet 2-second tail before "Hi." and after "Thanks for watching".
-- [ ] Sensitive data: the sample certificates in `assets/samples/` are test images, but if you record with a real customer cert, **blur the resident-registration number and the plate** in post.
-- [ ] Mask any Render hostnames you don't want public if needed (the demo URL itself is fine — it's already in the README).
-- [ ] Upload to **YouTube unlisted** or **Google Drive (anyone with the link can view)** and paste the link into the submission email.
+- [ ] **Cold-start warmup**: 5 minutes before recording, open both tabs and do one throwaway upload per provider so the Render containers are warm. Otherwise the first real upload will hang for 30–60 seconds.
+- [ ] **Display**: 1080p+ (1440p preferred), 16:9, browser zoom 110–125% so text reads on playback.
+- [ ] **Mic**: short check, 2 seconds of silence before "Hi" and after "Thanks for watching".
+- [ ] **Sensitive data**: the sample images in `assets/samples/` are test data; if you record with a real customer's certificate, blur the resident-registration number and the plate number in post.
+- [ ] **Upload to**: YouTube unlisted, or Google Drive with "anyone with the link can view". Paste the link in the submission email.
