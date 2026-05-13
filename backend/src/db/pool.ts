@@ -10,7 +10,27 @@ export const pool = new pg.Pool(
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+// Errors that won't get better with retries — fail fast so we don't compound auth lockouts
+// (e.g. Supabase Supavisor's ECIRCUITBREAKER after N bad passwords) or hide misconfiguration.
+function isPermanentDbError(err: unknown): boolean {
+  if (typeof err !== 'object' || err == null) return false;
+  const code = (err as { code?: unknown }).code;
+  if (typeof code === 'string') {
+    // 28P01 invalid_password, 28000 invalid_authorization_specification, 3D000 invalid_catalog_name
+    if (code === '28P01' || code === '28000' || code === '3D000') return true;
+  }
+  const message = (err as { message?: unknown }).message;
+  if (typeof message === 'string') {
+    if (message.includes('password authentication failed')) return true;
+    if (message.includes('ECIRCUITBREAKER')) return true;
+    if (message.includes('no pg_hba.conf entry')) return true;
+    if (message.includes('role') && message.includes('does not exist')) return true;
+  }
+  return false;
+}
+
 // Wait for Postgres to accept connections, with exponential backoff. Throws after the last attempt.
+// Auth / config errors short-circuit immediately (no retries) so we don't amplify lockouts.
 export async function waitForDb(maxAttempts = 10): Promise<void> {
   let lastErr: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -24,6 +44,10 @@ export async function waitForDb(maxAttempts = 10): Promise<void> {
       }
     } catch (err) {
       lastErr = err;
+      if (isPermanentDbError(err)) {
+        console.error(`db connection failed with a non-retryable error — check DATABASE_URL: ${String(err)}`);
+        throw new Error(`database authentication/config error: ${String(err)}`);
+      }
       if (attempt === maxAttempts) break;
       const delayMs = Math.min(1000 * 2 ** (attempt - 1), 10_000);
       console.warn(`db not ready (attempt ${attempt}/${maxAttempts}), retrying in ${delayMs}ms`);
