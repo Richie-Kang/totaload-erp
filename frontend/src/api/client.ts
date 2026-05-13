@@ -41,8 +41,29 @@ export async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// Transient errors on Render free-tier: containers sleep after 15 min idle, so the
+// first request after a long pause can return 502/503/504 while the container wakes.
+// We retry POST uploads once after a short delay so the user doesn't have to.
+const TRANSIENT_STATUSES = new Set([502, 503, 504]);
+
 export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
-  const res = await fetch(path, { method: 'POST', body: form });
+  const attempt = async (): Promise<Response> =>
+    fetch(path, { method: 'POST', body: form });
+  let res: Response;
+  try {
+    res = await attempt();
+  } catch (networkErr) {
+    // Pure network failure (DNS, TCP, TLS) — wait a bit and retry once.
+    await new Promise((r) => setTimeout(r, 4_000));
+    res = await attempt().catch(() => {
+      throw networkErr;
+    });
+  }
+  if (!res.ok && TRANSIENT_STATUSES.has(res.status)) {
+    // Likely cold-start. Wait for the upstream container to come up, then retry once.
+    await new Promise((r) => setTimeout(r, 8_000));
+    res = await attempt();
+  }
   if (!res.ok) throw await parseError(res);
   return res.json() as Promise<T>;
 }

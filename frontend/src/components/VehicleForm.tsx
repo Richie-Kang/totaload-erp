@@ -71,6 +71,7 @@ interface Props {
     errorCode: string | null;
     fields: OcrFields;
     provider?: OcrProvider;
+    durationMs?: number;
   } | null;
   onReanalyze?: () => void;
   onAttachMore?: () => void;
@@ -196,10 +197,12 @@ export function VehicleForm({
       };
     if (!ocrResult || bannerClosed) return null;
     const tag = providerLabel(ocrResult.provider);
+    const dur = formatDuration(ocrResult.durationMs);
+    const byTag = tag || dur ? ` (by ${[tag, dur].filter(Boolean).join(' · ')})` : '';
     if (ocrResult.status === 'ok')
       return {
         tone: 'green' as const,
-        text: `Auto-filled successfully — please cross-check against the certificate.${tag ? ` (by ${tag})` : ''}`,
+        text: `Auto-filled successfully — please cross-check against the certificate.${byTag}`,
         kr: '자동 입력 완료 — 값을 등록증과 대조해 확인하세요.',
         closable: true,
       };
@@ -209,13 +212,13 @@ export function VehicleForm({
         tone: 'amber' as const,
         text:
           `Only some fields were auto-filled — please complete the rest from the certificate.${miss.length ? ` (missing: ${miss.join(', ')})` : ''}` +
-          (tag ? ` (by ${tag})` : ''),
+          byTag,
         kr: '일부 항목만 자동 입력했습니다 — 빈 칸을 등록증을 보고 채워 주세요.',
       };
     }
     return {
       tone: 'amber' as const,
-      text: `Auto-fill failed${ocrResult.errorCode ? ` (${ocrResult.errorCode})` : ''}${tag ? ` · ${tag}` : ''} — please enter the values manually.`,
+      text: `Auto-fill failed${ocrResult.errorCode ? ` (${ocrResult.errorCode})` : ''}${byTag ? ` ·${byTag.slice(1)}` : ''} — please enter the values manually.`,
       kr: '자동 입력에 실패했습니다 — 등록증을 보고 직접 입력해 주세요.',
       retry: true,
     };
@@ -396,6 +399,12 @@ export function VehicleForm({
 function providerLabel(p: OcrProvider | undefined): string {
   if (!p) return '';
   return ({ upstage: 'Upstage', codex: 'Codex', gemini: 'Gemini' } as const)[p];
+}
+
+function formatDuration(ms: number | undefined): string {
+  if (ms == null || !Number.isFinite(ms)) return '';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
 }
 
 // OCR field name -> Vehicle field name (kept local to avoid an extra import cycle).

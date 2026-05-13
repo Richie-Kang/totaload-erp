@@ -64,6 +64,9 @@ export function Dropzone({ onFile, compact }: Props) {
         </p>
         <p className="mt-1 text-base text-slate-500">자동차등록증을 끌어다 놓거나 클릭해서 선택</p>
         <p className="mt-3 text-sm text-slate-400">JPG · PNG · PDF · up to 20 MB · 20MB 이하</p>
+        <p className="mt-1 text-xs text-slate-400">
+          First request may take ~30 s while the demo wakes up · 첫 요청은 콜드 스타트로 ~30초 걸릴 수 있음
+        </p>
       </button>
       <input
         ref={inputRef}

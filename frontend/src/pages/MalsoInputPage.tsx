@@ -21,6 +21,7 @@ type OcrResult = {
   errorCode: string | null;
   fields: OcrFields;
   provider?: OcrProvider;
+  durationMs?: number;
 };
 
 export function MalsoInputPage() {
@@ -85,6 +86,7 @@ export function MalsoInputPage() {
       if (prev) URL.revokeObjectURL(prev.url);
       return { file, url };
     });
+    const t0 = performance.now();
     upload.mutate(
       { file, provider },
       {
@@ -97,6 +99,7 @@ export function MalsoInputPage() {
               errorCode: res.errorCode,
               fields: res.fields,
               provider: res.ocrProvider,
+              durationMs: Math.round(performance.now() - t0),
             });
             applyToken.current += 1;
             setApplyOcr({ fields: res.fields, mode: 'fill-empty', token: applyToken.current });
@@ -126,6 +129,7 @@ export function MalsoInputPage() {
     reuploadInput.current?.click();
   }
   function onReuploadFile(file: File) {
+    const t0 = performance.now();
     upload.mutate(
       { file, provider },
       {
@@ -142,6 +146,7 @@ export function MalsoInputPage() {
               errorCode: res.errorCode,
               fields: res.fields,
               provider: res.ocrProvider,
+              durationMs: Math.round(performance.now() - t0),
             });
             applyToken.current += 1;
             setApplyOcr({ fields: res.fields, mode: reuploadMode.current as 'fill-empty' | 'overwrite', token: applyToken.current });
