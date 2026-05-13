@@ -350,6 +350,64 @@ def test_gemini_rate_limit(monkeypatch):
     assert r.error_code == "OCR_RATE_LIMIT"
 
 
+def test_gemini_model_not_found_is_unavailable(monkeypatch):
+    """A 404 from the model endpoint means the configured GEMINI_MODEL is deprecated
+    or wrong — surface as OCR_UNAVAILABLE so the UI hints at config, not bad input."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    class _Resp:
+        status_code = 404
+        text = '{"error":{"code":404,"message":"models/gemini-1.5-flash is not found"}}'
+        def json(self): return {}
+
+    monkeypatch.setattr(gemini_provider.httpx, "post", lambda *a, **kw: _Resp())
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="gemini")
+    assert r.error_code == "OCR_UNAVAILABLE"
+
+
+def test_gemini_safety_blocked_is_bad_output(monkeypatch):
+    """A 200 with finishReason=SAFETY (empty content.parts) → OCR_BAD_OUTPUT.
+    With our BLOCK_NONE safety settings this should be rare, but covers the path."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    class _Resp:
+        status_code = 200
+        text = ""
+        def json(self):
+            return {
+                "candidates": [
+                    {"finishReason": "SAFETY", "safetyRatings": [{"category": "X", "probability": "HIGH"}]}
+                ]
+            }
+
+    monkeypatch.setattr(gemini_provider.httpx, "post", lambda *a, **kw: _Resp())
+    r = extract_from_upload(_png_bytes(), "cert.png", provider="gemini")
+    assert r.error_code == "OCR_BAD_OUTPUT"
+    assert "SAFETY" in (r.raw or "")
+
+
+def test_gemini_sends_safety_settings_block_none(monkeypatch):
+    """Verify we actually send BLOCK_NONE for every category in the request body."""
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    captured = {}
+
+    class _Resp:
+        status_code = 200
+        text = ""
+        def json(self):
+            return {"candidates": [{"content": {"parts": [{"text": _full_json()}]}, "finishReason": "STOP"}]}
+
+    def _fake_post(url, **kwargs):
+        captured["json"] = kwargs.get("json")
+        return _Resp()
+
+    monkeypatch.setattr(gemini_provider.httpx, "post", _fake_post)
+    extract_from_upload(_png_bytes(), "cert.png", provider="gemini")
+    settings = captured["json"]["safetySettings"]
+    assert len(settings) >= 4
+    assert all(s["threshold"] == "BLOCK_NONE" for s in settings)
+
+
 # --- health ----------------------------------------------------------------
 
 def test_health():
