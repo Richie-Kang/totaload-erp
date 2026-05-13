@@ -66,6 +66,21 @@ backend(+postgres) 와 ocr-service(또는 모킹) 가 떠 있는 상태에서 `n
 - `CODEX_AUTH_JSON` 은 ChatGPT 계정 자격증명이다 — 안전하게 관리하고 리포/`render.yaml`/Dockerfile 에 절대 커밋하지 마라(`sync: false` / env / `.env`). `DATABASE_URL` 도 env(Render `fromDatabase`)로만 주입된다.
 - codex 토큰 만료 시: 로컬에서 `codex login` 으로 `~/.codex/auth.json` 을 갱신 → 그 내용을 `totaload-ocr` 의 `CODEX_AUTH_JSON` 에 다시 설정 → 재배포.
 
+## 한계 (Known limitations)
+
+MVP 범위에서 의도적으로 두지 않은 것 / 알려진 제약 (자세한 배경은 `docs/ADR.md`):
+
+- **로그인·권한 없음** — 누구나 접근 가능(ADR-004). 주민등록번호는 평문 저장(목록/검색 미노출, 상세에서 마스킹+토글). 사내·소규모 사용 전제. 향후 인증·컬럼 암호화 필요.
+- **OCR 정확도 보장 안 함** — codex(LLM 비전) 출력은 비결정적이고 환각 가능. 사람의 검수가 최종 책임이며, 시스템은 OCR 실패로 업무를 막지 않는다(항상 수동 입력 폴백).
+- **입력 PDF 는 첫 페이지만 OCR** — 멀티페이지 스캔이면 1페이지만 인식(ADR-010). 등록증 앞면이 1페이지라 실무상 수용.
+- **첨부 이미지가 여러 장이어도 OCR 은 첫 장만** — 나머지는 보기·참고용. 재인식은 "다시 분석"으로 명시적으로.
+- **OCR 동기 처리** — 업로드 요청이 codex 완료까지 대기(타임아웃 90초). 잡 큐 비동기화는 향후 과제(ADR-009).
+- **동시 편집 충돌 감지 없음** — 같은 차량을 둘이 동시에 고치면 last-write-wins(ADR-004 규모 수용).
+- **파일 저장 = 로컬 디스크** — S3 아님(ADR-006). 단일 노드, 백업 수동(운영 과제).
+- **재고관리·매입매출·정산·수출신고·통계·알림·다국어 없음** — `docs/PRD.md §8` 참조.
+- **모바일 전용 UI 아님** — 데스크톱 2열 우선, 좁은 화면은 best-effort(깨지지만 않게).
+- **`DELETE /api/malso/:id` 미구현** — 잘못 만든 레코드 정리 수단 없음(PRD §10).
+
 ## 운영 메모
 
 - **영구 디스크**: `render.yaml` 의 backend `disk:`(`/data/storage`)가 없으면 업로드 이미지·생성 PDF 가 재배포마다 사라진다 — 유지하라. (free 플랜은 디스크를 못 붙여서 backend 는 `starter` 플랜이다.)
