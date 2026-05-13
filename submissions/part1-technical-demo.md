@@ -20,6 +20,10 @@ The product target is the operator at a Korean used-car exporter who, today, han
 
 **One product improvement I'd ship:** a unified `schema_extract` endpoint that takes an image plus a user-defined JSON schema and returns the populated, layout-grounded object in one call — replacing the current `Document Parse → Solar Chat` two-step. Reasoning in §4.
 
+![Totaload OCR — three OCR providers from one upload screen](https://github.com/Richie-Kang/totaload-erp/raw/main/assets/screenshots/01-hero.png)
+
+*The deployed app. The operator drops a registration certificate onto the dropzone; the OCR engine is chosen from the segmented control in the top-right (Upstage is the default and listed first). Everything else — the form schema, the downstream PDF — is identical across the three providers, so the only variable in the comparison is the OCR engine.*
+
 ---
 
 ## 1. The document and why it's "complex"
@@ -75,6 +79,10 @@ Postgres `vehicles` row + filled PDF via pypdf
 
 The same prompt and the same `_parse_and_normalize` post-processing run for all three providers (Upstage, Codex, Gemini), so accuracy differences are attributable to the model, not the surrounding code.
 
+![Upstage two-step pipeline result — all nine fields populated, owner name and address split correctly](https://github.com/Richie-Kang/totaload-erp/raw/main/assets/screenshots/02-upstage-result.png)
+
+*Result on a real Korean vehicle registration certificate. Document Parse + Solar Chat returned populated values for every field in roughly 3.5 seconds; the "(by Upstage)" tag in the green banner makes the provider explicit so the operator can compare against Codex/Gemini side by side. Notice that the owner name and the address are split correctly even though they're printed on a single row on the source document — the defensive post-processing described in §3.2 catches that case.*
+
 ---
 
 ## 3. What worked, what didn't, how I addressed it
@@ -85,6 +93,10 @@ The same prompt and the same `_parse_and_normalize` post-processing run for all 
 - **Solar Chat respects `response_format: json_object`.** Across the test runs the model returned a clean dict every time — no JSON fences, no leading "Sure! Here is …", no trailing chatter. This is rare among LLM JSON-modes and was the single biggest reason I kept Upstage as the primary path.
 - **End-to-end latency is well inside the operator threshold.** Median ~3.5 s per cert on a Render free-tier container (no GPU). That's slow enough to show a spinner, fast enough that an operator doesn't context-switch away.
 - **Korean addresses survive normalization.** Document Parse keeps `경기도 이천시 장호원읍 경충대로718번길 53` as a contiguous string with predictable whitespace — the downstream `_norm_address` pass only has to collapse newlines, not reassemble tokens.
+
+![Generated official deregistration application PDF, page 1, with the 12 fields filled in](https://github.com/Richie-Kang/totaload-erp/raw/main/assets/screenshots/03-pdf-preview.png)
+
+*The deliverable. pypdf fills the 12 AcroForm fields of the government 별지 제17호서식 template — including the `vehicle_year ` field whose name has a literal trailing space, the `vehicle_vin_1` / `vehicle_vin_2` duplicated VIN that must hold identical strings across both pages, and the page-2 weight box that receives the same value as the page-1 weight row. The operator reviews the filled PDF, then downloads or prints.*
 
 ### 3.2 What didn't work, and the fix
 
