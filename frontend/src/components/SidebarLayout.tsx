@@ -11,12 +11,9 @@ export function SidebarLayout() {
   return (
     <div className="flex min-h-screen">
       <aside className="glass sticky top-0 flex h-screen w-[240px] shrink-0 flex-col rounded-r-2xl px-4 py-6">
-        <div className="flex items-center gap-2 px-3 pb-6">
-          <span className="inline-block h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-400 shadow-inner" />
-          <div className="leading-tight">
-            <div className="text-lg font-semibold tracking-tight text-slate-900">Totaload</div>
-            <div className="text-xs text-slate-500">Used-car export ERP</div>
-          </div>
+        <div className="px-3 pb-6">
+          <div className="text-xl font-semibold tracking-tight text-slate-900">Totaload OCR</div>
+          <div className="text-xs text-slate-500">Used-car export ERP</div>
         </div>
         <nav className="space-y-1.5">
           <NavLink to="/malso/new" className={({ isActive }) => linkClass(isActive)}>
