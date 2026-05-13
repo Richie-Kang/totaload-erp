@@ -2,21 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Light Pantone-inspired surface — soft violet → rose → sky gradient, anchored top-left.
+   The translucent surfaces below ("glass") pick up these hues through backdrop-blur. */
+:root {
+  font-size: 17px; /* base bumped from 16px for camera/projector readability */
+}
+html, body, #root {
+  height: 100%;
+}
 body {
   margin: 0;
-  background-color: #0a0a0a;
-  color: #fff;
+  color: #0f172a; /* slate-900 */
   font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  background:
+    radial-gradient(1100px 700px at 12% -10%, #ede9fe 0%, transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, #ffe4e6 0%, transparent 55%),
+    radial-gradient(900px 800px at 90% 100%, #dbeafe 0%, transparent 60%),
+    linear-gradient(180deg, #faf7ff 0%, #fdf6f8 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Re-usable surface tokens. Use via @apply on Tailwind classes where possible. */
+.glass {
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 10px 40px -10px rgba(91, 33, 182, 0.18);
+}
+.glass-soft {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+
+/* Hairline rule used to separate Korean from English label */
+.bil-sep::before {
+  content: '·';
+  margin: 0 0.4em;
+  color: #94a3b8; /* slate-400 */
+}
+
+/* small input fix — white-glass backgrounds need a transparent control to inherit */
+input, textarea, select {
+  background-color: transparent;
 }
 
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-.fade-in { animation: fade-in 0.2s ease-out; }
+.fade-in { animation: fade-in 0.22s ease-out; }
 
 @keyframes toast-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.toast-in { animation: toast-in 0.2s ease-out; }
+.toast-in { animation: toast-in 0.22s ease-out; }

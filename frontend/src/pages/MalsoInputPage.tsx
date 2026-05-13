@@ -104,8 +104,10 @@ export function MalsoInputPage() {
         },
         onError: (e) => {
           toast.error(
-            e instanceof ApiError ? `업로드 실패: ${e.message}` : '업로드에 실패했습니다.',
-            { label: '재시도', onClick: () => startUpload(file) },
+            e instanceof ApiError
+              ? `Upload failed: ${e.message} · 업로드 실패`
+              : 'Upload failed · 업로드 실패',
+            { label: 'Retry · 재시도', onClick: () => startUpload(file) },
           );
         },
       },
@@ -143,10 +145,15 @@ export function MalsoInputPage() {
             applyToken.current += 1;
             setApplyOcr({ fields: res.fields, mode: reuploadMode.current as 'fill-empty' | 'overwrite', token: applyToken.current });
           } else {
-            toast.success('이미지를 첨부했습니다.');
+            toast.success('Attached · 이미지 첨부 완료');
           }
         },
-        onError: (e) => toast.error(e instanceof ApiError ? e.message : '업로드에 실패했습니다.'),
+        onError: (e) =>
+          toast.error(
+            e instanceof ApiError
+              ? `Upload failed: ${e.message} · 업로드 실패`
+              : 'Upload failed · 업로드 실패',
+          ),
       },
     );
   }
@@ -176,10 +183,14 @@ export function MalsoInputPage() {
       const d = new Date();
       const stamp = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
       setPdfBlob({ blob, name: `말소등록신청서_${tag}_${stamp}.pdf` });
-      if (missing.length) toast.show(`비어 있는 항목: ${missing.join(', ')}`, { kind: 'info' });
-      else toast.success('PDF 를 만들었습니다.');
+      if (missing.length) toast.show(`Empty fields: ${missing.join(', ')} · 비어 있는 항목`, { kind: 'info' });
+      else toast.success('PDF generated · PDF 생성 완료');
     } catch (e) {
-      toast.error(e instanceof ApiError ? `PDF 생성 실패: ${e.message}` : 'PDF 생성에 실패했습니다.');
+      toast.error(
+        e instanceof ApiError
+          ? `PDF generation failed: ${e.message} · PDF 생성 실패`
+          : 'PDF generation failed · PDF 생성 실패',
+      );
     }
   }
 
@@ -217,28 +228,37 @@ export function MalsoInputPage() {
   }
   if (routeId && !localFile && vehicleQuery.isError) {
     return (
-      <div className="space-y-3">
-        <p className="text-sm text-neutral-400">이 차량을 찾을 수 없습니다.</p>
-        <button onClick={() => navigate('/malso/search')} className="text-sm underline">← 검색으로</button>
+      <div className="mx-auto w-full max-w-2xl space-y-4 py-10 text-center">
+        <p className="text-lg text-slate-700">Vehicle not found · 이 차량을 찾을 수 없습니다</p>
+        <button onClick={() => navigate('/malso/search')} className="text-base text-violet-700 underline">
+          ← Back to search · 검색으로
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center gap-3">
         {vehicle ? (
           <>
-            <button onClick={() => navigate('/malso/search')} className="text-sm text-neutral-400 hover:text-neutral-200">← 검색으로</button>
-            <h1 className="text-xl font-semibold">{vehicle.reg_no || '(차량번호 미입력)'}</h1>
-            <span className="text-sm text-neutral-400">{vehicle.model || '차명 미입력'}</span>
+            <button
+              onClick={() => navigate('/malso/search')}
+              className="text-sm text-slate-500 hover:text-slate-900"
+            >
+              ← Back to search · 검색으로
+            </button>
+            <h1 className="text-2xl font-semibold text-slate-900">{vehicle.reg_no || '— (no plate)'}</h1>
+            <span className="text-base text-slate-500">{vehicle.model || 'No model · 차명 미입력'}</span>
             <StatusBadge status={vehicle.status} />
-            <span className="hidden text-xs text-neutral-500 sm:inline">
-              생성 {formatDateTime(vehicle.created_at)} · 수정 {formatDateTime(vehicle.updated_at)}
+            <span className="hidden text-xs text-slate-500 sm:inline">
+              Created {formatDateTime(vehicle.created_at)} · Updated {formatDateTime(vehicle.updated_at)}
             </span>
           </>
         ) : (
-          <h1 className="text-xl font-semibold">말소 입력</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Deregistration Input <span className="text-base font-normal text-slate-500">· 말소 입력</span>
+          </h1>
         )}
         <div className="ml-auto">
           <ProviderSelector value={provider} onChange={setProvider} disabled={upload.isPending} />
@@ -246,10 +266,10 @@ export function MalsoInputPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="min-h-[420px]">
+        <div className="min-h-[480px]">
           <ImageViewer items={viewerItems} />
         </div>
-        <div className="flex min-h-[420px] flex-col">
+        <div className="glass flex min-h-[480px] flex-col rounded-2xl p-5">
           {showForm ? (
             <VehicleForm
               key={formKey}
@@ -262,7 +282,10 @@ export function MalsoInputPage() {
               onAttachMore={routeId ? () => pickReupload('attach') : undefined}
               applyOcr={applyOcr}
               onMissingImportant={(labels) =>
-                ask('필수 항목이 비어 있습니다', `${labels.join(', ')} 가(이) 비어 있습니다. 그대로 만들까요?`)
+                ask(
+                  'Required fields are empty · 필수 항목 비어있음',
+                  `${labels.join(', ')} — proceed anyway? · 그대로 만들까요?`,
+                )
               }
               onGeneratePdf={handleGeneratePdf}
               onUnsavedChange={setUnsaved}
@@ -274,14 +297,20 @@ export function MalsoInputPage() {
       </div>
 
       {pdfDocs.length > 0 && (
-        <div className="rounded-lg border border-neutral-800 bg-[#141414] p-4">
-          <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">생성된 말소등록 신청서</h3>
-          <ul className="space-y-1 text-sm">
+        <div className="glass rounded-2xl p-5">
+          <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-violet-700">
+            Generated applications <span className="font-normal normal-case tracking-normal text-slate-400">· 생성된 말소등록 신청서</span>
+          </h3>
+          <ul className="space-y-1.5 text-sm">
             {pdfDocs.map((d) => (
-              <li key={d.id} className="flex items-center gap-3 text-neutral-300">
-                <span className="text-neutral-500">{formatDateTime(d.created_at)}</span>
-                <a href={d.url} target="_blank" rel="noreferrer" className="underline hover:no-underline">미리보기</a>
-                <a href={d.url} download className="underline hover:no-underline">다운로드</a>
+              <li key={d.id} className="flex items-center gap-4 text-slate-700">
+                <span className="text-slate-500">{formatDateTime(d.created_at)}</span>
+                <a href={d.url} target="_blank" rel="noreferrer" className="text-violet-700 underline hover:no-underline">
+                  Preview · 미리보기
+                </a>
+                <a href={d.url} download className="text-violet-700 underline hover:no-underline">
+                  Download · 다운로드
+                </a>
               </li>
             ))}
           </ul>
@@ -342,35 +371,48 @@ function StateA({
   const search = useSearch('');
   const drafts = (search.data ?? []).filter((v) => v.status === 'draft').slice(0, 10);
   return (
-    <div className="mx-auto max-w-2xl space-y-8 py-8">
-      <div className="flex items-start gap-3">
+    <div className="mx-auto w-full max-w-3xl space-y-8 py-4">
+      <div className="flex flex-wrap items-start gap-4">
         <div className="flex-1">
-          <h1 className="mb-1 text-2xl font-semibold">말소 입력</h1>
-          <p className="text-sm text-neutral-400">자동차등록증을 올리면 빈 폼이 즉시 열리고, 분석이 끝나면 빈 칸이 자동으로 채워집니다.</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+            Deregistration Input
+            <span className="ml-3 text-xl font-normal text-slate-500">· 말소 입력</span>
+          </h1>
+          <p className="mt-2 text-base text-slate-600">
+            Drop a registration certificate — the form opens immediately, and empty fields
+            auto-fill when OCR returns.
+            <br />
+            <span className="text-slate-500">자동차등록증을 올리면 빈 폼이 즉시 열리고, 분석이 끝나면 빈 칸이 자동으로 채워집니다.</span>
+          </p>
         </div>
         <ProviderSelector value={provider} onChange={setProvider} />
       </div>
       <Dropzone onFile={onFile} />
       <div>
-        <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">작성 중</h2>
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-violet-700">
+          In progress <span className="font-normal normal-case tracking-normal text-slate-400">· 작성 중</span>
+        </h2>
         {search.isLoading ? (
           <div className="space-y-2">
-            <Skeleton className="h-9" />
-            <Skeleton className="h-9" />
+            <Skeleton className="h-10" />
+            <Skeleton className="h-10" />
           </div>
         ) : drafts.length === 0 ? (
-          <EmptyState>작성 중인 차량이 없습니다. 등록증을 올려 시작하세요.</EmptyState>
+          <EmptyState>
+            <p>No drafts yet — drop a certificate above to start.</p>
+            <p className="mt-1 text-sm text-slate-400">작성 중인 차량이 없습니다. 등록증을 올려 시작하세요.</p>
+          </EmptyState>
         ) : (
-          <ul className="divide-y divide-neutral-800 rounded-lg border border-neutral-800">
+          <ul className="glass-soft divide-y divide-white/40 overflow-hidden rounded-2xl">
             {drafts.map((v) => (
               <li key={v.id}>
                 <button
                   onClick={() => navigate(`/malso/${v.id}`)}
-                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm hover:bg-neutral-900"
+                  className="flex w-full items-center gap-3 px-4 py-3 text-left text-base hover:bg-white/60"
                 >
-                  <span className="font-medium text-neutral-200">{v.reg_no || '(차량번호 미입력)'}</span>
-                  <span className="text-neutral-400">{v.model || '차명 미입력'}</span>
-                  <span className="text-neutral-500">{v.owner_name || ''}</span>
+                  <span className="font-medium text-slate-900">{v.reg_no || '— (no plate)'}</span>
+                  <span className="text-slate-600">{v.model || ''}</span>
+                  <span className="text-slate-500">{v.owner_name || ''}</span>
                   <span className="ml-auto"><StatusBadge status={v.status} /></span>
                 </button>
               </li>
@@ -378,7 +420,7 @@ function StateA({
           </ul>
         )}
       </div>
-      <p className="text-xs text-neutral-600">{todayKr()}</p>
+      <p className="text-sm text-slate-400">{todayKr()}</p>
     </div>
   );
 }

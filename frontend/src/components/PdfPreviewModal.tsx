@@ -41,50 +41,58 @@ export function PdfPreviewModal({ blob, filename, onClose, onNew }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <div
-        className="fade-in flex h-[85vh] w-full max-w-3xl flex-col rounded-lg border border-neutral-700 bg-[#161616]"
+        className="fade-in glass flex h-[88vh] w-full max-w-4xl flex-col rounded-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-neutral-800 px-4 py-3">
-          <h2 className="text-base font-semibold">말소등록 신청서 미리보기</h2>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-300" aria-label="닫기">✕</button>
+        <div className="flex items-center justify-between border-b border-white/40 px-5 py-3.5">
+          <h2 className="text-lg font-semibold text-slate-900">
+            Application preview <span className="text-sm font-normal text-slate-500">· 말소등록 신청서 미리보기</span>
+          </h2>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-800" aria-label="Close">✕</button>
         </div>
 
-        <div className="flex-1 overflow-hidden bg-neutral-900">
+        <div className="flex-1 overflow-hidden bg-white/60">
           {canEmbed ? (
             <object data={url} type="application/pdf" className="h-full w-full" onError={() => setCanEmbed(false)}>
-              <div className="flex h-full items-center justify-center p-6 text-center text-sm text-neutral-400">
-                이 브라우저에서는 PDF 미리보기를 열 수 없습니다.{' '}
-                <a href={url} download={filename} className="underline">PDF 다운로드</a>
+              <div className="flex h-full items-center justify-center p-6 text-center text-base text-slate-600">
+                Your browser can't preview PDFs inline · 이 브라우저에서는 PDF 미리보기 불가{' '}
+                <a href={url} download={filename} className="ml-2 text-violet-700 underline">Download · PDF 다운로드</a>
               </div>
             </object>
           ) : (
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-neutral-400">
-              이 브라우저에서는 PDF 미리보기를 열 수 없습니다.{' '}
-              <a href={url} download={filename} className="underline">PDF 다운로드</a>
+            <div className="flex h-full items-center justify-center p-6 text-center text-base text-slate-600">
+              Your browser can't preview PDFs inline · 이 브라우저에서는 PDF 미리보기 불가{' '}
+              <a href={url} download={filename} className="ml-2 text-violet-700 underline">Download · PDF 다운로드</a>
             </div>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-neutral-800 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-white/40 px-5 py-4">
           <a
             href={url}
             download={filename}
-            className="rounded-md bg-white px-3 py-2 text-sm font-medium text-black hover:bg-neutral-200"
+            className="rounded-xl bg-violet-600 px-4 py-2 text-base font-semibold text-white shadow-md shadow-violet-600/30 hover:bg-violet-700"
           >
-            다운로드
+            Download · 다운로드
           </a>
-          <button onClick={print} className="rounded-md border border-neutral-700 px-3 py-2 text-sm hover:bg-neutral-800">
-            인쇄
+          <button
+            onClick={print}
+            className="rounded-xl border border-violet-200 bg-white/70 px-4 py-2 text-base text-slate-800 hover:bg-white"
+          >
+            Print · 인쇄
           </button>
-          <span className="text-xs text-neutral-500">실제 크기(100%)로 인쇄하세요.</span>
+          <span className="text-sm text-slate-500">Print at 100% scale · 실제 크기로 인쇄하세요</span>
           <div className="ml-auto flex gap-2">
-            <button onClick={onClose} className="rounded-md px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200">
-              닫고 계속 수정
+            <button onClick={onClose} className="rounded-xl px-3 py-2 text-base text-slate-600 hover:text-slate-900">
+              Close · 닫고 계속 수정
             </button>
-            <button onClick={onNew} className="rounded-md border border-neutral-700 px-3 py-2 text-sm hover:bg-neutral-800">
-              새 말소 입력 시작
+            <button
+              onClick={onNew}
+              className="rounded-xl border border-violet-200 bg-white/70 px-3 py-2 text-base text-slate-800 hover:bg-white"
+            >
+              New input · 새 말소 입력
             </button>
           </div>
         </div>

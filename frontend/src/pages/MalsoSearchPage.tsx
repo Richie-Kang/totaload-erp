@@ -9,8 +9,7 @@ import { useToast } from '../components/Toast';
 import { formatDate, splitHighlight } from '../lib/format';
 import type { VehicleSummary } from '../api/types';
 
-// 말소 검색 — search-as-you-type (debounce 300ms, from 1 char). Empty query => recent vehicles.
-// docs/UI_GUIDE.md §4.4.
+// 말소 검색 — search-as-you-type. Centered glass list. docs/UI_GUIDE.md §4.4.
 export function MalsoSearchPage() {
   const [q, setQ] = useState('');
   const navigate = useNavigate();
@@ -28,7 +27,7 @@ export function MalsoSearchPage() {
     return m ? (
       <>
         {a}
-        <mark className="bg-amber-500/30 text-inherit">{m}</mark>
+        <mark className="rounded bg-amber-200 px-0.5 text-inherit">{m}</mark>
         {z}
       </>
     ) : (
@@ -42,19 +41,29 @@ export function MalsoSearchPage() {
     setPendingDelete(null);
     try {
       await del.mutateAsync(target.id);
-      toast.show(`${target.reg_no || target.vin || '차량'} 을(를) 삭제했습니다.`, { kind: 'success' });
+      toast.show(
+        `Deleted ${target.reg_no || target.vin || 'vehicle'} · 삭제 완료`,
+        { kind: 'success' },
+      );
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : '삭제에 실패했습니다.';
+      const msg = e instanceof ApiError ? e.message : 'Delete failed · 삭제 실패';
       toast.show(msg, { kind: 'error' });
     }
   }
 
   return (
-    <div className="max-w-3xl space-y-5">
-      <h1 className="text-2xl font-semibold">말소 검색</h1>
+    <div className="mx-auto w-full max-w-3xl space-y-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
+          Search <span className="text-xl font-normal text-slate-500">· 말소 검색</span>
+        </h1>
+        <p className="mt-2 text-base text-slate-500">
+          Find a past vehicle by plate or VIN · 차량번호 또는 차대번호로 검색
+        </p>
+      </div>
 
-      <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2">
-        <svg viewBox="0 0 24 24" className="h-4 w-4 text-neutral-500" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <div className="glass flex items-center gap-3 rounded-2xl px-4 py-3">
+        <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth="1.6">
           <circle cx="11" cy="11" r="7" />
           <path d="m21 21-4.3-4.3" strokeLinecap="round" />
         </svg>
@@ -62,60 +71,81 @@ export function MalsoSearchPage() {
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="차량번호 또는 차대번호 일부 입력"
-          className="min-w-0 flex-1 bg-transparent text-sm text-neutral-100 outline-none placeholder:text-neutral-600"
+          placeholder="Plate or VIN · 차량번호 또는 차대번호 일부"
+          className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400"
         />
         {q && (
-          <button onClick={() => setQ('')} className="text-neutral-500 hover:text-neutral-300" aria-label="지우기">
+          <button
+            onClick={() => setQ('')}
+            className="text-slate-400 hover:text-slate-700"
+            aria-label="Clear · 지우기"
+          >
             ✕
           </button>
         )}
       </div>
 
-      {!debounced && <p className="text-xs text-neutral-500">최근 차량</p>}
-      {rows.length > 50 && <p className="text-xs text-amber-400">결과가 많습니다. 더 정확히 입력하면 범위를 좁힐 수 있습니다.</p>}
+      {!debounced && (
+        <p className="text-center text-sm text-slate-500">Recent vehicles · 최근 차량</p>
+      )}
+      {rows.length > 50 && (
+        <p className="text-center text-sm text-amber-700">
+          Too many results — narrow your query · 결과가 많습니다, 더 정확히 입력하세요
+        </p>
+      )}
 
       {isError ? (
-        <p className="text-sm text-amber-400">검색 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.</p>
+        <p className="text-center text-base text-amber-700">
+          Search error — try again · 검색 중 오류가 발생했습니다
+        </p>
       ) : isLoading ? (
         <div className="space-y-2">
-          <Skeleton className="h-12" />
-          <Skeleton className="h-12" />
-          <Skeleton className="h-12" />
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
+          <Skeleton className="h-14" />
         </div>
       ) : rows.length === 0 ? (
         debounced ? (
-          <div className="rounded-lg border border-dashed border-neutral-800 px-6 py-10 text-center text-sm text-neutral-500">
-            ‘{debounced}’에 해당하는 차량이 없습니다.{' '}
-            <Link to="/malso/new" className="underline">말소 입력에서 새로 추가</Link>
+          <div className="glass-soft rounded-2xl border border-dashed border-violet-200 px-6 py-12 text-center text-base text-slate-500">
+            <p>No vehicle matches "{debounced}" · 일치하는 차량 없음</p>
+            <Link to="/malso/new" className="mt-3 inline-block text-violet-700 underline">
+              Start a new input · 말소 입력에서 새로 추가
+            </Link>
           </div>
         ) : (
-          <div className="rounded-lg border border-dashed border-neutral-800 px-6 py-10 text-center text-sm text-neutral-500">
-            아직 차량이 없습니다. <Link to="/malso/new" className="underline">말소 입력</Link> 에서 시작하세요.
+          <div className="glass-soft rounded-2xl border border-dashed border-violet-200 px-6 py-12 text-center text-base text-slate-500">
+            <p>No vehicles yet · 아직 차량이 없습니다</p>
+            <Link to="/malso/new" className="mt-3 inline-block text-violet-700 underline">
+              Go to input · 말소 입력으로
+            </Link>
           </div>
         )
       ) : (
-        <ul className={`divide-y divide-neutral-800 rounded-lg border border-neutral-800 ${isFetching ? 'opacity-60' : ''}`}>
+        <ul className={`glass divide-y divide-white/40 overflow-hidden rounded-2xl ${isFetching ? 'opacity-70' : ''}`}>
           {rows.map((v) => (
-            <li key={v.id} className="group flex items-center gap-2 pr-2 hover:bg-neutral-900">
+            <li key={v.id} className="group flex items-center gap-2 pr-3 hover:bg-white/50">
               <button
                 onClick={() => navigate(`/malso/${v.id}`)}
                 onKeyDown={(e) => e.key === 'Enter' && navigate(`/malso/${v.id}`)}
-                className="flex flex-1 items-center gap-4 px-4 py-3 text-left text-sm"
+                className="flex flex-1 items-center gap-4 px-5 py-4 text-left text-base"
               >
-                <span className="w-32 shrink-0 font-medium text-neutral-100">{highlight(v.reg_no)}</span>
-                <span className="flex-1 truncate text-neutral-300">{v.model || '차명 미입력'}</span>
-                <span className="w-28 shrink-0 truncate text-neutral-400">{v.owner_name || ''}</span>
-                <span className="shrink-0"><StatusBadge status={v.status} /></span>
-                <span className="w-24 shrink-0 text-right text-neutral-500">{formatDate(v.created_at)}</span>
+                <span className="w-32 shrink-0 font-semibold text-slate-900">{highlight(v.reg_no)}</span>
+                <span className="flex-1 truncate text-slate-700">
+                  {v.model || <span className="text-slate-400">no model · 차명 미입력</span>}
+                </span>
+                <span className="w-28 shrink-0 truncate text-slate-500">{v.owner_name || ''}</span>
+                <span className="shrink-0">
+                  <StatusBadge status={v.status} />
+                </span>
+                <span className="w-24 shrink-0 text-right text-sm text-slate-500">{formatDate(v.created_at)}</span>
               </button>
               <button
                 onClick={() => setPendingDelete(v)}
-                className="shrink-0 rounded px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-red-400"
-                aria-label={`${v.reg_no || v.vin || '차량'} 삭제`}
-                title="삭제"
+                className="shrink-0 rounded-lg px-3 py-1.5 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600"
+                aria-label={`Delete ${v.reg_no || v.vin || ''}`}
+                title="Delete · 삭제"
               >
-                삭제
+                Delete · 삭제
               </button>
             </li>
           ))}
@@ -124,18 +154,23 @@ export function MalsoSearchPage() {
 
       <ConfirmModal
         open={!!pendingDelete}
-        title="차량 삭제"
+        title="Delete vehicle · 차량 삭제"
         body={
           <>
             <p>
-              <span className="font-medium text-neutral-100">{pendingDelete?.reg_no || pendingDelete?.vin || '이 차량'}</span>
-              {' '}의 모든 정보와 첨부 문서(등록증 이미지·생성된 신청서 PDF)가 영구 삭제됩니다.
+              All data and attachments for{' '}
+              <span className="font-medium text-slate-900">{pendingDelete?.reg_no || pendingDelete?.vin || 'this vehicle'}</span>
+              {' '}will be permanently removed.
             </p>
-            <p className="mt-2 text-neutral-500">이 동작은 되돌릴 수 없습니다.</p>
+            <p className="mt-1 text-sm text-slate-500">
+              <span className="font-medium text-slate-700">{pendingDelete?.reg_no || pendingDelete?.vin || '이 차량'}</span>
+              의 모든 정보와 첨부 문서가 영구 삭제됩니다.
+            </p>
+            <p className="mt-3 text-sm text-amber-700">This action cannot be undone · 되돌릴 수 없습니다.</p>
           </>
         }
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        confirmLabel="Delete · 삭제"
+        cancelLabel="Cancel · 취소"
         onConfirm={confirmDelete}
         onCancel={() => setPendingDelete(null)}
       />

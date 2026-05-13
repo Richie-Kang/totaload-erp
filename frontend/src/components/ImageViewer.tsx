@@ -18,8 +18,8 @@ export function ImageViewer({ items }: { items: ViewerItem[] }) {
 
   if (items.length === 0) {
     return (
-      <div className="flex h-full min-h-[300px] items-center justify-center rounded-lg border border-dashed border-neutral-800 text-sm text-neutral-600">
-        첨부된 등록증 이미지가 없습니다.
+      <div className="flex h-full min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-violet-200 bg-white/40 text-base text-slate-500 backdrop-blur-md">
+        No registration certificate attached · 첨부된 등록증 이미지가 없습니다
       </div>
     );
   }
@@ -37,15 +37,16 @@ export function ImageViewer({ items }: { items: ViewerItem[] }) {
     reset();
   }
 
+  const btn = 'rounded-lg border border-violet-200/70 bg-white/70 px-2.5 py-1 text-slate-700 backdrop-blur-md hover:bg-white hover:text-slate-900';
   return (
     <div className="flex h-full flex-col gap-2">
-      <div className="flex items-center gap-2 text-xs text-neutral-400">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
         {!isPdf && (
           <>
-            <button onClick={() => setScale((s) => Math.min(s * 1.25, 8))} className="rounded border border-neutral-700 px-2 py-1 hover:bg-neutral-800">확대 +</button>
-            <button onClick={() => setScale((s) => Math.max(s / 1.25, 0.2))} className="rounded border border-neutral-700 px-2 py-1 hover:bg-neutral-800">축소 −</button>
-            <button onClick={() => setRot((r) => (r + 90) % 360)} className="rounded border border-neutral-700 px-2 py-1 hover:bg-neutral-800">90° 회전</button>
-            <button onClick={reset} className="rounded border border-neutral-700 px-2 py-1 hover:bg-neutral-800">원래대로</button>
+            <button onClick={() => setScale((s) => Math.min(s * 1.25, 8))} className={btn}>Zoom in · 확대 +</button>
+            <button onClick={() => setScale((s) => Math.max(s / 1.25, 0.2))} className={btn}>Zoom out · 축소 −</button>
+            <button onClick={() => setRot((r) => (r + 90) % 360)} className={btn}>Rotate 90° · 회전</button>
+            <button onClick={reset} className={btn}>Reset · 원래대로</button>
           </>
         )}
         <a
@@ -53,14 +54,14 @@ export function ImageViewer({ items }: { items: ViewerItem[] }) {
           download={isPdf ? undefined : (cur.name ?? true)}
           target={isPdf ? '_blank' : undefined}
           rel="noreferrer"
-          className="ml-auto underline hover:no-underline"
+          className="ml-auto text-violet-700 underline hover:no-underline"
         >
-          {isPdf ? '원본 PDF 보기' : '원본 다운로드'}
+          {isPdf ? 'Open PDF · 원본 PDF 보기' : 'Download · 원본 다운로드'}
         </a>
       </div>
 
       <div
-        className="relative flex-1 overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950"
+        className="glass relative flex-1 overflow-hidden rounded-2xl"
         onWheel={
           isPdf
             ? undefined
@@ -105,10 +106,10 @@ export function ImageViewer({ items }: { items: ViewerItem[] }) {
             <button
               key={i}
               onClick={() => pick(i)}
-              className={`h-14 w-14 shrink-0 overflow-hidden rounded border ${i === idx ? 'border-neutral-400' : 'border-neutral-800'}`}
+              className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 ${i === idx ? 'border-violet-500 ring-2 ring-violet-200' : 'border-white/60'}`}
             >
               {it.mime === 'application/pdf' ? (
-                <span className="flex h-full w-full items-center justify-center bg-neutral-900 text-[10px] text-neutral-500">PDF</span>
+                <span className="flex h-full w-full items-center justify-center bg-violet-100 text-xs font-medium text-violet-700">PDF</span>
               ) : (
                 <img src={it.url} alt="" className="h-full w-full object-cover" />
               )}

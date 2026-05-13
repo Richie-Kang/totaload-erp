@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_OCR_PROVIDER, OCR_PROVIDERS, type OcrProvider } from '../api/types';
+import { CodexIcon, GeminiIcon, UpstageIcon } from './ProviderIcons';
 
 const STORAGE_KEY = 'totaload.ocrProvider';
 
-const META: Record<OcrProvider, { name: string; tag: string }> = {
-  upstage: { name: 'Upstage', tag: 'Document OCR · primary' },
-  codex: { name: 'Codex', tag: 'CLI vision' },
-  gemini: { name: 'Gemini', tag: '1.5 Flash' },
+const META: Record<OcrProvider, { name: string; kr: string; tag: string; Icon: (p: { className?: string }) => JSX.Element }> = {
+  upstage: { name: 'Upstage', kr: '업스테이지', tag: 'Document OCR · primary', Icon: UpstageIcon },
+  codex: { name: 'Codex', kr: '코덱스', tag: 'OpenAI CLI vision', Icon: CodexIcon },
+  gemini: { name: 'Gemini', kr: '제미나이', tag: 'Google 1.5 Flash', Icon: GeminiIcon },
 };
 
 function readStored(): OcrProvider {
@@ -15,7 +16,6 @@ function readStored(): OcrProvider {
   return (OCR_PROVIDERS as readonly string[]).includes(v ?? '') ? (v as OcrProvider) : DEFAULT_OCR_PROVIDER;
 }
 
-// React hook: returns [provider, setProvider]. Persists in localStorage.
 export function useOcrProvider(): [OcrProvider, (p: OcrProvider) => void] {
   const [provider, setProviderState] = useState<OcrProvider>(readStored);
   useEffect(() => {
@@ -31,13 +31,17 @@ interface Props {
   disabled?: boolean;
 }
 
-// Segmented control — Upstage first (primary). Compact, fits a page header.
+// Segmented control with provider logos. Upstage first (primary).
 export function ProviderSelector({ value, onChange, disabled }: Props) {
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="text-neutral-500">OCR 엔진</span>
-      <div className="inline-flex rounded-md border border-neutral-800 bg-neutral-900 p-0.5">
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-slate-500">
+        OCR engine <span className="text-slate-400">· OCR 엔진</span>
+      </span>
+      <div className="glass-soft inline-flex rounded-xl p-1">
         {OCR_PROVIDERS.map((p) => {
+          const meta = META[p];
+          const Icon = meta.Icon;
           const active = p === value;
           return (
             <button
@@ -46,15 +50,17 @@ export function ProviderSelector({ value, onChange, disabled }: Props) {
               disabled={disabled}
               onClick={() => onChange(p)}
               className={
-                'rounded px-2.5 py-1 transition-colors disabled:opacity-50 ' +
+                'flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all disabled:opacity-40 ' +
                 (active
-                  ? 'bg-white text-black'
-                  : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100')
+                  ? 'bg-white text-slate-900 shadow-md ring-1 ring-violet-300/40'
+                  : 'text-slate-600 hover:bg-white/60 hover:text-slate-900')
               }
-              title={META[p].tag}
+              title={meta.tag}
               aria-pressed={active}
             >
-              {META[p].name}
+              <Icon className="h-5 w-5" />
+              <span className="font-medium">{meta.name}</span>
+              <span className="hidden text-xs text-slate-500 md:inline">· {meta.kr}</span>
             </button>
           );
         })}

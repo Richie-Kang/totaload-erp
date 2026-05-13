@@ -11,34 +11,35 @@ import { Spinner } from './misc';
 type FieldKind = 'text' | 'number' | 'date';
 interface FieldDef {
   key: VehicleField;
-  label: string;
+  label: string;   // English
+  labelKr: string; // Korean
   kind: FieldKind;
-  important?: boolean; // amber "확인 필요" when empty
+  important?: boolean;
   hint?: string;
 }
-const SECTIONS: { title: string; fields: FieldDef[] }[] = [
+const SECTIONS: { title: string; titleKr: string; fields: FieldDef[] }[] = [
   {
-    title: '소유자',
+    title: 'Owner', titleKr: '소유자',
     fields: [
-      { key: 'owner_name', label: '성명(명칭)', kind: 'text', important: true },
-      { key: 'owner_ssn', label: '주민(법인)등록번호', kind: 'text', hint: '앞 6자리 - 뒤 7자리 숫자' },
-      { key: 'owner_address', label: '주소', kind: 'text' },
+      { key: 'owner_name', label: 'Name', labelKr: '성명(명칭)', kind: 'text', important: true },
+      { key: 'owner_ssn', label: 'Resident reg. no.', labelKr: '주민(법인)등록번호', kind: 'text', hint: '앞 6자리 - 뒤 7자리 · 6 + 7 digits' },
+      { key: 'owner_address', label: 'Address', labelKr: '주소', kind: 'text' },
     ],
   },
   {
-    title: '차량',
+    title: 'Vehicle', titleKr: '차량',
     fields: [
-      { key: 'reg_no', label: '자동차등록번호', kind: 'text', important: true, hint: '예: 123가4567' },
-      { key: 'vin', label: '차대번호', kind: 'text', important: true, hint: '영숫자, 보통 17자' },
-      { key: 'model', label: '차명', kind: 'text' },
-      { key: 'year', label: '형식·연식', kind: 'text' },
-      { key: 'mileage', label: '주행거리(km)', kind: 'number' },
-      { key: 'weight', label: '차량중량(kg)', kind: 'number' },
+      { key: 'reg_no', label: 'Plate number', labelKr: '자동차등록번호', kind: 'text', important: true, hint: '예: 123가4567' },
+      { key: 'vin', label: 'VIN', labelKr: '차대번호', kind: 'text', important: true, hint: 'Alphanumeric, usually 17 chars · 영숫자 17자' },
+      { key: 'model', label: 'Model', labelKr: '차명', kind: 'text' },
+      { key: 'year', label: 'Type · Year', labelKr: '형식·연식', kind: 'text' },
+      { key: 'mileage', label: 'Mileage (km)', labelKr: '주행거리(km)', kind: 'number' },
+      { key: 'weight', label: 'Weight (kg)', labelKr: '차량중량(kg)', kind: 'number' },
     ],
   },
   {
-    title: '신청서',
-    fields: [{ key: 'app_date', label: '작성일', kind: 'date', hint: '비우면 오늘 날짜로 채워집니다' }],
+    title: 'Application', titleKr: '신청서',
+    fields: [{ key: 'app_date', label: 'Application date', labelKr: '작성일', kind: 'date', hint: 'Defaults to today · 비우면 오늘' }],
   },
 ];
 const ALL_FIELDS = SECTIONS.flatMap((s) => s.fields);
@@ -190,14 +191,16 @@ export function VehicleForm({
     if (analyzing)
       return {
         tone: 'blue' as const,
-        text: '등록증을 분석하고 있습니다… 결과가 나오면 빈 칸이 자동으로 채워집니다. 그동안 아는 값을 먼저 입력해도 됩니다.',
+        text: 'Analyzing the registration certificate… empty fields will fill in automatically when it returns. You can start typing now.',
+        kr: '등록증을 분석하고 있습니다 — 결과가 오면 빈 칸이 자동으로 채워집니다. 그동안 아는 값을 먼저 입력해도 됩니다.',
       };
     if (!ocrResult || bannerClosed) return null;
     const tag = providerLabel(ocrResult.provider);
     if (ocrResult.status === 'ok')
       return {
         tone: 'green' as const,
-        text: `자동 입력 완료 — 값을 등록증과 대조해 확인하세요.${tag ? ` (by ${tag})` : ''}`,
+        text: `Auto-filled successfully — please cross-check against the certificate.${tag ? ` (by ${tag})` : ''}`,
+        kr: '자동 입력 완료 — 값을 등록증과 대조해 확인하세요.',
         closable: true,
       };
     if (ocrResult.status === 'partial') {
@@ -205,13 +208,15 @@ export function VehicleForm({
       return {
         tone: 'amber' as const,
         text:
-          `일부 항목만 자동 입력했습니다. 빈 칸을 등록증을 보고 채워 주세요.${miss.length ? ` (누락: ${miss.join(', ')})` : ''}` +
+          `Only some fields were auto-filled — please complete the rest from the certificate.${miss.length ? ` (missing: ${miss.join(', ')})` : ''}` +
           (tag ? ` (by ${tag})` : ''),
+        kr: '일부 항목만 자동 입력했습니다 — 빈 칸을 등록증을 보고 채워 주세요.',
       };
     }
     return {
       tone: 'amber' as const,
-      text: `자동 입력에 실패했습니다${ocrResult.errorCode ? ` (사유: ${ocrResult.errorCode})` : ''}${tag ? ` · ${tag}` : ''}. 등록증을 보고 직접 입력해 주세요.`,
+      text: `Auto-fill failed${ocrResult.errorCode ? ` (${ocrResult.errorCode})` : ''}${tag ? ` · ${tag}` : ''} — please enter the values manually.`,
+      kr: '자동 입력에 실패했습니다 — 등록증을 보고 직접 입력해 주세요.',
       retry: true,
     };
   }, [analyzing, ocrResult, bannerClosed]);
@@ -240,32 +245,44 @@ export function VehicleForm({
     <div className="flex h-full flex-col">
       {banner && (
         <div
-          className={`fade-in mb-4 flex items-start gap-3 rounded-md border px-4 py-3 text-sm ${
+          className={`fade-in mb-5 flex items-start gap-3 rounded-2xl border px-5 py-4 text-base shadow-sm backdrop-blur-md ${
             banner.tone === 'blue'
-              ? 'border-blue-900 bg-[#0d1422] text-blue-200'
+              ? 'border-sky-300/70 bg-sky-100/70 text-sky-900'
               : banner.tone === 'green'
-                ? 'border-green-900 bg-[#0f1a12] text-green-200'
-                : 'border-amber-900 bg-[#1a160d] text-amber-200'
+                ? 'border-emerald-300/70 bg-emerald-100/70 text-emerald-900'
+                : 'border-amber-300/70 bg-amber-100/70 text-amber-900'
           }`}
         >
-          {banner.tone === 'blue' && <Spinner className="mt-0.5 h-4 w-4" />}
-          <span className="flex-1 leading-relaxed">{banner.text}</span>
+          {banner.tone === 'blue' && <Spinner className="mt-1 h-4 w-4" />}
+          <div className="flex-1 leading-relaxed">
+            <div className="font-medium">{banner.text}</div>
+            {'kr' in banner && banner.kr && (
+              <div className="mt-0.5 text-sm opacity-80">{banner.kr}</div>
+            )}
+          </div>
           {analyzing && onCancelAnalyze && (
-            <button onClick={onCancelAnalyze} className="shrink-0 underline hover:no-underline">분석 취소</button>
+            <button onClick={onCancelAnalyze} className="shrink-0 whitespace-nowrap text-sm underline hover:no-underline">
+              Cancel · 분석 취소
+            </button>
           )}
           {'retry' in banner && banner.retry && onReanalyze && (
-            <button onClick={onReanalyze} className="shrink-0 underline hover:no-underline">다시 분석</button>
+            <button onClick={onReanalyze} className="shrink-0 whitespace-nowrap text-sm underline hover:no-underline">
+              Re-analyze · 다시 분석
+            </button>
           )}
           {'closable' in banner && banner.closable && (
-            <button onClick={() => setBannerClosed(true)} className="shrink-0 text-current opacity-60 hover:opacity-100" aria-label="닫기">✕</button>
+            <button onClick={() => setBannerClosed(true)} className="shrink-0 text-current opacity-60 hover:opacity-100" aria-label="Close">✕</button>
           )}
         </div>
       )}
 
-      <div className="flex-1 space-y-6 overflow-y-auto pb-4">
+      <div className="flex-1 space-y-7 overflow-y-auto pb-4">
         {SECTIONS.map((section) => (
           <div key={section.title}>
-            <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">{section.title}</h3>
+            <h3 className="mb-3 flex items-baseline gap-2 text-xs font-semibold uppercase tracking-wider text-violet-700">
+              <span>{section.title}</span>
+              <span className="font-normal normal-case tracking-normal text-slate-400">· {section.titleKr}</span>
+            </h3>
             <div className="space-y-2">
               {section.fields.map((f) => {
                 const val = values[f.key] ?? '';
@@ -284,10 +301,17 @@ export function VehicleForm({
                 return (
                   <div
                     key={f.key}
-                    className={`rounded-md border px-3 py-2 ${showAmber ? 'border-l-2 border-l-amber-500 border-neutral-800' : 'border-neutral-800'} bg-neutral-900/40`}
+                    className={`rounded-xl border bg-white/70 px-3 py-2.5 backdrop-blur-md transition-all ${
+                      showAmber
+                        ? 'border-amber-300 ring-2 ring-amber-200/40'
+                        : 'border-white/70 hover:border-violet-200'
+                    }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <label htmlFor={`f-${f.key}`} className="w-28 shrink-0 text-xs text-neutral-400">{f.label}</label>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label htmlFor={`f-${f.key}`} className="w-44 shrink-0 text-sm">
+                        <span className="block font-medium text-slate-800">{f.label}</span>
+                        <span className="block text-xs text-slate-500">{f.labelKr}</span>
+                      </label>
                       <input
                         id={`f-${f.key}`}
                         type="text"
@@ -298,17 +322,19 @@ export function VehicleForm({
                         }}
                         onBlur={() => debouncedSave.flush()}
                         inputMode={f.kind === 'number' ? 'numeric' : undefined}
-                        className="min-w-0 flex-1 rounded bg-transparent px-1 py-1 text-sm text-neutral-100 outline-none focus:bg-neutral-800/60"
+                        className="min-w-0 flex-1 rounded-lg border border-transparent bg-white/80 px-3 py-1.5 text-base text-slate-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-200"
                       />
                       {filledByOcr && (
-                        <span className="shrink-0 rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
-                          {isTouched ? '수정됨' : '자동 입력'}
+                        <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-700 ring-1 ring-violet-200">
+                          {isTouched ? 'Edited · 수정됨' : 'Auto · 자동 입력'}
                         </span>
                       )}
-                      {showAmber && <span className="shrink-0 text-[10px] text-amber-400">확인 필요</span>}
+                      {showAmber && (
+                        <span className="shrink-0 text-xs font-medium text-amber-600">Review · 확인 필요</span>
+                      )}
                     </div>
                     {f.hint && (isEmpty || (f.key === 'owner_ssn' && !ssnLooksOk)) && (
-                      <p className="ml-28 mt-0.5 pl-2 text-[10px] text-neutral-600">{f.hint}</p>
+                      <p className="ml-44 mt-1 pl-2 text-xs text-slate-500">{f.hint}</p>
                     )}
                   </div>
                 );
@@ -318,31 +344,49 @@ export function VehicleForm({
         ))}
 
         {(onReanalyze || onAttachMore) && (
-          <div className="flex gap-3 text-xs text-neutral-500">
-            {onReanalyze && <button onClick={onReanalyze} className="underline hover:text-neutral-300">다시 분석</button>}
-            {onAttachMore && <button onClick={onAttachMore} className="underline hover:text-neutral-300">이미지 추가 첨부</button>}
-            <span className="text-neutral-600">· OCR 은 첫 번째 이미지 기준입니다. 다른 장은 보기·참고용.</span>
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            {onReanalyze && (
+              <button onClick={onReanalyze} className="text-violet-700 underline hover:no-underline">
+                Re-analyze · 다시 분석
+              </button>
+            )}
+            {onAttachMore && (
+              <button onClick={onAttachMore} className="text-violet-700 underline hover:no-underline">
+                Attach more · 이미지 추가 첨부
+              </button>
+            )}
+            <span className="text-xs text-slate-500">
+              · OCR runs on the first image only · OCR 은 첫 번째 이미지 기준
+            </span>
           </div>
         )}
       </div>
 
       {/* sticky action bar */}
-      <div className="sticky bottom-0 -mx-1 mt-2 flex items-center gap-3 border-t border-neutral-800 bg-[#0a0a0a] px-1 pt-3">
+      <div className="sticky bottom-0 -mx-1 mt-3 flex flex-wrap items-center gap-3 border-t border-white/50 bg-white/60 px-2 pb-1 pt-4 backdrop-blur-md">
         <button
           onClick={handleGeneratePdf}
           disabled={generating || !vehicleId}
-          className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-200 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-base font-semibold text-white shadow-md shadow-violet-600/30 transition-all hover:bg-violet-700 hover:shadow-lg disabled:opacity-50"
         >
-          {generating && <Spinner />} 말소등록 신청서 PDF 만들기
+          {generating && <Spinner />}
+          <span>
+            Generate application PDF
+            <span className="ml-2 text-sm font-normal opacity-90">· 말소등록 신청서 PDF 만들기</span>
+          </span>
         </button>
-        <span className="text-xs text-neutral-500">
-          {failCount > 0
-            ? <button onClick={doSave} className="text-amber-400 underline">저장 실패 — 다시 저장</button>
-            : saving
-              ? '저장 중…'
-              : savedAt
-                ? `저장됨 ${savedAt}`
-                : ''}
+        <span className="text-sm text-slate-500">
+          {failCount > 0 ? (
+            <button onClick={doSave} className="text-amber-700 underline">
+              Save failed — retry · 저장 실패, 다시 저장
+            </button>
+          ) : saving ? (
+            'Saving… · 저장 중'
+          ) : savedAt ? (
+            `Saved ${savedAt} · 저장됨`
+          ) : (
+            ''
+          )}
         </span>
       </div>
     </div>

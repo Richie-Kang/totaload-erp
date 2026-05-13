@@ -51,14 +51,19 @@ export function Dropzone({ onFile, compact }: Props) {
           const f = e.dataTransfer.files?.[0];
           if (f) validateAndEmit(f);
         }}
-        className={`block w-full rounded-lg border-2 border-dashed text-center transition-colors ${
-          compact ? 'px-4 py-6' : 'px-6 py-16'
-        } ${over ? 'border-neutral-500 bg-neutral-900' : 'border-neutral-700 hover:border-neutral-600'}`}
+        className={`glass-soft block w-full rounded-2xl border-2 border-dashed text-center transition-all ${
+          compact ? 'px-4 py-8' : 'px-6 py-20'
+        } ${over ? 'border-violet-500 bg-violet-50/80 ring-4 ring-violet-200/40' : 'border-violet-300/70 hover:border-violet-400'}`}
       >
-        <p className="text-sm text-neutral-300">
-          자동차등록증 이미지를 끌어다 놓거나 클릭해서 선택
+        <svg viewBox="0 0 24 24" className="mx-auto mb-3 h-10 w-10 text-violet-500" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M12 16V4m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" strokeLinecap="round" />
+        </svg>
+        <p className="text-lg font-medium text-slate-800">
+          Drop the registration certificate, or click to choose
         </p>
-        <p className="mt-1 text-xs text-neutral-500">JPG · PNG · PDF · 20MB 이하</p>
+        <p className="mt-1 text-base text-slate-500">자동차등록증을 끌어다 놓거나 클릭해서 선택</p>
+        <p className="mt-3 text-sm text-slate-400">JPG · PNG · PDF · up to 20 MB · 20MB 이하</p>
       </button>
       <input
         ref={inputRef}
@@ -71,7 +76,7 @@ export function Dropzone({ onFile, compact }: Props) {
           e.target.value = '';
         }}
       />
-      {error && <p className="mt-2 text-xs text-amber-400">{error}</p>}
+      {error && <p className="mt-3 text-sm text-amber-700">{error}</p>}
     </div>
   );
 }

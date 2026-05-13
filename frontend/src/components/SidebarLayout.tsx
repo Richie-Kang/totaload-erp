@@ -1,25 +1,68 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
-// Fixed left sidebar (~220px): product name + the two screens. docs/UI_GUIDE.md §4.2.
+// Glass sidebar over the gradient background. Bilingual nav (English · 한글). docs/UI_GUIDE.md §4.2.
 export function SidebarLayout() {
-  const link = (active: boolean) =>
-    `block rounded-md px-3 py-2 text-sm ${active ? 'bg-neutral-800 text-white' : 'text-neutral-400 hover:text-neutral-200'}`;
+  const linkClass = (active: boolean) =>
+    `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-base transition-colors ${
+      active
+        ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
+        : 'text-slate-700 hover:bg-white/60 hover:text-slate-900'
+    }`;
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-[220px] shrink-0 flex-col border-r border-neutral-800 bg-[#0d0d0d] px-3 py-5">
-        <div className="px-3 pb-6 text-lg font-semibold tracking-tight">Totaload</div>
-        <nav className="space-y-1">
-          <NavLink to="/malso/new" className={({ isActive }) => link(isActive)}>
-            말소 입력
+      <aside className="glass sticky top-0 flex h-screen w-[240px] shrink-0 flex-col rounded-r-2xl px-4 py-6">
+        <div className="flex items-center gap-2 px-3 pb-6">
+          <span className="inline-block h-7 w-7 rounded-lg bg-gradient-to-br from-violet-500 via-fuchsia-500 to-rose-400 shadow-inner" />
+          <div className="leading-tight">
+            <div className="text-lg font-semibold tracking-tight text-slate-900">Totaload</div>
+            <div className="text-xs text-slate-500">Used-car export ERP</div>
+          </div>
+        </div>
+        <nav className="space-y-1.5">
+          <NavLink to="/malso/new" className={({ isActive }) => linkClass(isActive)}>
+            <SvgInput active />
+            <span className="flex-1">
+              <span className="font-medium">Deregistration Input</span>
+              <span className="block text-xs opacity-80">말소 입력</span>
+            </span>
           </NavLink>
-          <NavLink to="/malso/search" className={({ isActive }) => link(isActive)}>
-            말소 검색
+          <NavLink to="/malso/search" className={({ isActive }) => linkClass(isActive)}>
+            <SvgSearch />
+            <span className="flex-1">
+              <span className="font-medium">Search</span>
+              <span className="block text-xs opacity-80">말소 검색</span>
+            </span>
           </NavLink>
         </nav>
+        <div className="mt-auto px-3 pt-6 text-xs leading-relaxed text-slate-500">
+          <p className="font-medium text-slate-600">TRYNIC Co., Ltd.</p>
+          <p>Used-car export deregistration assistant</p>
+        </div>
       </aside>
-      <main className="min-w-0 flex-1 px-8 py-6">
-        <Outlet />
+
+      <main className="min-w-0 flex-1">
+        <div className="mx-auto w-full max-w-6xl px-6 py-8 lg:px-10 lg:py-10">
+          <Outlet />
+        </div>
       </main>
     </div>
+  );
+}
+
+function SvgInput({ active }: { active?: boolean }) {
+  const stroke = active ? 'white' : 'currentColor';
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke={stroke} strokeWidth="1.6">
+      <path d="M5 5h11l3 3v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" strokeLinejoin="round" />
+      <path d="M8 12h8M8 16h5" strokeLinecap="round" />
+    </svg>
+  );
+}
+function SvgSearch() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" strokeLinecap="round" />
+    </svg>
   );
 }
