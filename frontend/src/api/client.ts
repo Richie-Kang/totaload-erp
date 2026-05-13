@@ -47,6 +47,11 @@ export async function apiPostForm<T>(path: string, form: FormData): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function apiDelete(path: string): Promise<void> {
+  const res = await fetch(path, { method: 'DELETE' });
+  if (!res.ok) throw await parseError(res);
+}
+
 // POST that returns a PDF blob plus the X-Missing-Fields header.
 export async function apiPostPdf(
   path: string,

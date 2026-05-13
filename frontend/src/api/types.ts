@@ -14,7 +14,6 @@ export interface Vehicle {
   year: string | null;
   mileage: number | null;
   weight: number | null;
-  total_weight: number | null;
   app_date: string | null;
   note: string | null;
   raw_ocr: unknown;
@@ -54,7 +53,6 @@ export interface OcrFields {
   vehicle_year: string | null;
   vehicle_mileage: number | null;
   vehicle_weight: number | null;
-  vehicle_total_weight: number | null;
 }
 
 export interface UploadResponse {
@@ -81,7 +79,6 @@ export type VehicleField =
   | 'year'
   | 'mileage'
   | 'weight'
-  | 'total_weight'
   | 'app_date'
   | 'note';
 
@@ -98,5 +95,4 @@ export const OCR_TO_VEHICLE: Record<keyof OcrFields, VehicleField> = {
   vehicle_year: 'year',
   vehicle_mileage: 'mileage',
   vehicle_weight: 'weight',
-  vehicle_total_weight: 'total_weight',
 };

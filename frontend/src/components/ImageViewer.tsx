@@ -82,13 +82,16 @@ export function ImageViewer({ items }: { items: ViewerItem[] }) {
         style={{ minHeight: 320, cursor: isPdf ? 'default' : 'grab' }}
       >
         {isPdf ? (
-          <iframe title={cur.name ?? 'PDF'} src={cur.url} className="h-full w-full" style={{ minHeight: 480 }} />
+          // #view=Fit makes the embedded PDF viewer fit the page to the iframe (whole page visible).
+          <iframe title={cur.name ?? 'PDF'} src={`${cur.url}#view=Fit`} className="h-full w-full" style={{ minHeight: 480 }} />
         ) : (
+          // max-h/w-full + object-contain means scale=1 = fits container. The transform's scale then
+          // magnifies on top of the fitted size, so zoom in / out behaves intuitively.
           <img
             src={cur.url}
             alt={cur.name ?? '등록증'}
             draggable={false}
-            className="absolute left-1/2 top-1/2 max-w-none select-none"
+            className="absolute left-1/2 top-1/2 max-h-full max-w-full select-none object-contain"
             style={{
               transform: `translate(-50%,-50%) translate(${pos.x}px,${pos.y}px) scale(${scale}) rotate(${rot}deg)`,
             }}

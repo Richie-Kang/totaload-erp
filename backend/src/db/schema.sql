@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS vehicles (
   year          text,
   mileage       integer,
   weight        integer,
-  total_weight  integer,
   app_date      text,
   note          text,
   raw_ocr       jsonb,
@@ -23,6 +22,19 @@ CREATE TABLE IF NOT EXISTS vehicles (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
+-- Older dev/prod DBs had `weight` (공차중량) + `total_weight` (총중량). Consolidated into a single
+-- `weight` column whose semantics are the total weight: drop the old weight, rename total_weight.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'vehicles' AND column_name = 'total_weight'
+  ) THEN
+    ALTER TABLE vehicles DROP COLUMN IF EXISTS weight;
+    ALTER TABLE vehicles RENAME COLUMN total_weight TO weight;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS documents (
   id          uuid primary key default gen_random_uuid(),

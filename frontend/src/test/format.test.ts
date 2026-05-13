@@ -1,16 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maskSsn, splitHighlight, stripCommas } from '../lib/format';
-
-describe('maskSsn', () => {
-  it('masks the back 7 digits', () => {
-    expect(maskSsn('860101-1234567')).toBe('860101-*******');
-    expect(maskSsn('8601011234567')).toBe('860101-*******');
-  });
-  it('returns empty for empty', () => {
-    expect(maskSsn('')).toBe('');
-    expect(maskSsn(undefined)).toBe('');
-  });
-});
+import { splitHighlight, stripCommas } from '../lib/format';
 
 describe('stripCommas', () => {
   it('removes commas and whitespace', () => {

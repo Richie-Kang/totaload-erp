@@ -48,7 +48,6 @@ const FIELD_LABELS: Partial<Record<VehicleField, string>> = {
   year: '형식·연식',
   mileage: '주행거리',
   weight: '차량중량',
-  total_weight: '차량총중량',
 };
 
 export function missingOcrLabels(ocr: OcrFields): string[] {

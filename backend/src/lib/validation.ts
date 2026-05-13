@@ -17,12 +17,11 @@ export const ALLOWED_VEHICLE_FIELDS = [
   'year',
   'mileage',
   'weight',
-  'total_weight',
   'app_date',
   'note',
 ] as const;
 
-const NUMERIC_FIELDS = new Set(['mileage', 'weight', 'total_weight']);
+const NUMERIC_FIELDS = new Set(['mileage', 'weight']);
 const MAX_TEXT_LEN = 2000;
 const MAX_NUMERIC = 100_000_000;
 

@@ -13,7 +13,6 @@ function ocr(partial: Partial<OcrFields>): OcrFields {
     vehicle_year: null,
     vehicle_mileage: null,
     vehicle_weight: null,
-    vehicle_total_weight: null,
     ...partial,
   };
 }

@@ -3,7 +3,7 @@
 
 const OCR_SERVICE_URL = (process.env.OCR_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
 
-// The 10 logical OCR fields (matches ocr-service ExtractedFields).
+// The 9 logical OCR fields (matches ocr-service ExtractedFields).
 export interface OcrFields {
   owner_name: string | null;
   owner_ssn: string | null;
@@ -14,7 +14,6 @@ export interface OcrFields {
   vehicle_year: string | null;
   vehicle_mileage: number | null;
   vehicle_weight: number | null;
-  vehicle_total_weight: number | null;
 }
 
 export type OcrStatus = 'ok' | 'partial' | 'failed';
@@ -38,7 +37,6 @@ export function emptyFields(): OcrFields {
     vehicle_year: null,
     vehicle_mileage: null,
     vehicle_weight: null,
-    vehicle_total_weight: null,
   };
 }
 
@@ -87,7 +85,6 @@ export interface FillPdfValues {
   vehicle_year: string | null;
   vehicle_mileage: string | null;
   vehicle_weight: string | null;
-  vehicle_total_weight: string | null;
   current_date: string | null;
 }
 

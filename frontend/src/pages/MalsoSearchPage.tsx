@@ -1,17 +1,24 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useSearch } from '../api/hooks';
+import { useDeleteVehicle, useSearch } from '../api/hooks';
+import { ApiError } from '../api/client';
 import { useDebounce } from '../lib/useDebounce';
 import { Skeleton, StatusBadge } from '../components/misc';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { useToast } from '../components/Toast';
 import { formatDate, splitHighlight } from '../lib/format';
+import type { VehicleSummary } from '../api/types';
 
 // 말소 검색 — search-as-you-type (debounce 300ms, from 1 char). Empty query => recent vehicles.
-// docs/UI_GUIDE.md §4.4. Never shows owner_ssn (API doesn't return it).
+// docs/UI_GUIDE.md §4.4.
 export function MalsoSearchPage() {
   const [q, setQ] = useState('');
   const navigate = useNavigate();
   const debounced = useDebounce(q.trim(), 300);
   const { data, isLoading, isFetching, isError } = useSearch(debounced);
+  const del = useDeleteVehicle();
+  const toast = useToast();
+  const [pendingDelete, setPendingDelete] = useState<VehicleSummary | null>(null);
   const rows = data ?? [];
 
   function highlight(text: string | null) {
@@ -27,6 +34,19 @@ export function MalsoSearchPage() {
     ) : (
       t || '—'
     );
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const target = pendingDelete;
+    setPendingDelete(null);
+    try {
+      await del.mutateAsync(target.id);
+      toast.show(`${target.reg_no || target.vin || '차량'} 을(를) 삭제했습니다.`, { kind: 'success' });
+    } catch (e) {
+      const msg = e instanceof ApiError ? e.message : '삭제에 실패했습니다.';
+      toast.show(msg, { kind: 'error' });
+    }
   }
 
   return (
@@ -77,11 +97,11 @@ export function MalsoSearchPage() {
       ) : (
         <ul className={`divide-y divide-neutral-800 rounded-lg border border-neutral-800 ${isFetching ? 'opacity-60' : ''}`}>
           {rows.map((v) => (
-            <li key={v.id}>
+            <li key={v.id} className="group flex items-center gap-2 pr-2 hover:bg-neutral-900">
               <button
                 onClick={() => navigate(`/malso/${v.id}`)}
                 onKeyDown={(e) => e.key === 'Enter' && navigate(`/malso/${v.id}`)}
-                className="flex w-full items-center gap-4 px-4 py-3 text-left text-sm hover:bg-neutral-900"
+                className="flex flex-1 items-center gap-4 px-4 py-3 text-left text-sm"
               >
                 <span className="w-32 shrink-0 font-medium text-neutral-100">{highlight(v.reg_no)}</span>
                 <span className="flex-1 truncate text-neutral-300">{v.model || '차명 미입력'}</span>
@@ -89,10 +109,36 @@ export function MalsoSearchPage() {
                 <span className="shrink-0"><StatusBadge status={v.status} /></span>
                 <span className="w-24 shrink-0 text-right text-neutral-500">{formatDate(v.created_at)}</span>
               </button>
+              <button
+                onClick={() => setPendingDelete(v)}
+                className="shrink-0 rounded px-2 py-1 text-xs text-neutral-500 hover:bg-neutral-800 hover:text-red-400"
+                aria-label={`${v.reg_no || v.vin || '차량'} 삭제`}
+                title="삭제"
+              >
+                삭제
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      <ConfirmModal
+        open={!!pendingDelete}
+        title="차량 삭제"
+        body={
+          <>
+            <p>
+              <span className="font-medium text-neutral-100">{pendingDelete?.reg_no || pendingDelete?.vin || '이 차량'}</span>
+              {' '}의 모든 정보와 첨부 문서(등록증 이미지·생성된 신청서 PDF)가 영구 삭제됩니다.
+            </p>
+            <p className="mt-2 text-neutral-500">이 동작은 되돌릴 수 없습니다.</p>
+          </>
+        }
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

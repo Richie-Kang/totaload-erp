@@ -13,7 +13,7 @@ from app.schema import FillPdfRequest
 
 ALL_KEYS = (
     "owner_name", "owner_ssn", "owner_address", "vehicle_reg_no", "vehicle_vin",
-    "vehicle_model", "vehicle_year", "vehicle_mileage", "vehicle_weight", "vehicle_total_weight",
+    "vehicle_model", "vehicle_year", "vehicle_mileage", "vehicle_weight",
 )
 
 
@@ -33,8 +33,7 @@ def _full_json(**overrides) -> str:
         "vehicle_model": "레이",
         "vehicle_year": "2015",
         "vehicle_mileage": 12000,
-        "vehicle_weight": 900,
-        "vehicle_total_weight": 1200,
+        "vehicle_weight": 1200,
     }
     obj.update(overrides)
     return json.dumps(obj, ensure_ascii=False)
@@ -57,8 +56,8 @@ def test_fill_pdf_all_fields():
     req = FillPdfRequest(
         owner_name="홍길동", owner_ssn="860101-1234567", owner_address="인천 미추홀구 어딘가로 12",
         vehicle_reg_no="123가4567", vehicle_vin="KL3AB12CD34567890", vehicle_model="레이",
-        vehicle_year="2015", vehicle_mileage="12000", vehicle_weight="900",
-        vehicle_total_weight="1200", current_date="2026년 5월 13일",
+        vehicle_year="2015", vehicle_mileage="12000", vehicle_weight="1200",
+        current_date="2026년 5월 13일",
     )
     pdf_bytes, missing = fill(req)
     assert missing == []
@@ -68,7 +67,8 @@ def test_fill_pdf_all_fields():
     assert _field_value(reader, "vehicle_vin_1") == _field_value(reader, "vehicle_vin_2") == "KL3AB12CD34567890"
     assert _field_value(reader, "vehicle_year ") == "2015"
     assert _field_value(reader, "current_date") == "2026년 5월 13일"
-    assert _field_value(reader, "vehicle_weight_1") == "900"
+    # both weight fields receive the consolidated 차량중량 value
+    assert _field_value(reader, "vehicle_weight_1") == "1200"
     assert _field_value(reader, "vehicle_weight_2") == "1200"
 
 

@@ -16,7 +16,6 @@ export interface Vehicle {
   year: string | null;
   mileage: number | null;
   weight: number | null;
-  total_weight: number | null;
   app_date: string | null;
   note: string | null;
   raw_ocr: unknown;
@@ -50,7 +49,7 @@ export interface DocumentRow {
 
 const DOC_COLS = 'id, vehicle_id, kind, orig_name, mime, size_bytes, created_at';
 
-const NUMERIC_FIELDS = new Set(['mileage', 'weight', 'total_weight']);
+const NUMERIC_FIELDS = new Set(['mileage', 'weight']);
 
 function toIntOrNull(v: unknown): number | null {
   if (v == null) return null;
@@ -96,7 +95,6 @@ export async function createFromOcr(extract: ExtractResult): Promise<Vehicle> {
     emptyToNull(f.vehicle_year),
     toIntOrNull(f.vehicle_mileage),
     toIntOrNull(f.vehicle_weight),
-    toIntOrNull(f.vehicle_total_weight),
     todayKr(),
     JSON.stringify(rawOcr),
     extract.status,
@@ -104,8 +102,8 @@ export async function createFromOcr(extract: ExtractResult): Promise<Vehicle> {
   try {
     const r = await query<Vehicle>(
       `insert into vehicles
-         (reg_no, vin, owner_name, owner_ssn, owner_address, model, year, mileage, weight, total_weight, app_date, raw_ocr, ocr_status, status)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'draft')
+         (reg_no, vin, owner_name, owner_ssn, owner_address, model, year, mileage, weight, app_date, raw_ocr, ocr_status, status)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'draft')
        returning *`,
       params,
     );
@@ -151,6 +149,12 @@ export async function update(id: string, fields: Record<string, unknown>): Promi
 
 export async function setCompleted(id: string): Promise<void> {
   await query("update vehicles set status = 'completed', updated_at = now() where id = $1", [id]);
+}
+
+// Deletes a vehicle and its documents (ON DELETE CASCADE). Returns true if a row was removed.
+export async function deleteById(id: string): Promise<boolean> {
+  const r = await query('delete from vehicles where id = $1', [id]);
+  return (r.rowCount ?? 0) > 0;
 }
 
 export async function addDocument(doc: {

@@ -71,8 +71,7 @@ def fill(req: FillPdfRequest) -> tuple[bytes, list[str]]:
         current_date = f"{today.year}년 {today.month}월 {today.day}일"
 
     vin = s(req.vehicle_vin)
-    weight_1 = s(req.vehicle_weight)
-    weight_2 = s(req.vehicle_total_weight) or weight_1
+    weight = s(req.vehicle_weight)
 
     mapping = {
         "owner_name": s(req.owner_name),
@@ -84,8 +83,9 @@ def fill(req: FillPdfRequest) -> tuple[bytes, list[str]]:
         "vehicle_model": s(req.vehicle_model),
         "vehicle_year ": s(req.vehicle_year),
         "vehicle_mileage": s(req.vehicle_mileage),
-        "vehicle_weight_1": weight_1,
-        "vehicle_weight_2": weight_2,
+        # 2p WEIGHT KG and 2p 총합계 KG both get the same value (consolidated 차량중량).
+        "vehicle_weight_1": weight,
+        "vehicle_weight_2": weight,
         "current_date": current_date,
     }
     missing = [k for k in _IMPORTANT_FIELDS if not mapping.get(k)]

@@ -15,7 +15,6 @@ class ExtractedFields(BaseModel):
     vehicle_year: Optional[str] = None
     vehicle_mileage: Optional[int] = None
     vehicle_weight: Optional[int] = None
-    vehicle_total_weight: Optional[int] = None
 
 
 class ExtractResponse(BaseModel):
@@ -37,5 +36,4 @@ class FillPdfRequest(BaseModel):
     vehicle_year: Optional[str] = None
     vehicle_mileage: Optional[str] = None
     vehicle_weight: Optional[str] = None
-    vehicle_total_weight: Optional[str] = None
     current_date: Optional[str] = None

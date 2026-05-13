@@ -3,12 +3,12 @@ import type { OcrFields, OcrStatus, Vehicle, VehicleField } from '../api/types';
 import { usePatchVehicle } from '../api/hooks';
 import { ApiError } from '../api/client';
 import { mergeOcrFields, missingOcrLabels, type FormValues } from '../lib/merge';
-import { formatClock, maskSsn, stripCommas, todayKr } from '../lib/format';
+import { formatClock, stripCommas, todayKr } from '../lib/format';
 import { useDebouncedCallback } from '../lib/useDebounce';
 import { Spinner } from './misc';
 
 // ---- field definitions (Tab order = registration cert reading order) ----
-type FieldKind = 'text' | 'number' | 'ssn' | 'date';
+type FieldKind = 'text' | 'number' | 'date';
 interface FieldDef {
   key: VehicleField;
   label: string;
@@ -21,7 +21,7 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
     title: '소유자',
     fields: [
       { key: 'owner_name', label: '성명(명칭)', kind: 'text', important: true },
-      { key: 'owner_ssn', label: '주민(법인)등록번호', kind: 'ssn', hint: '앞 6자리 - 뒤 7자리 숫자' },
+      { key: 'owner_ssn', label: '주민(법인)등록번호', kind: 'text', hint: '앞 6자리 - 뒤 7자리 숫자' },
       { key: 'owner_address', label: '주소', kind: 'text' },
     ],
   },
@@ -34,7 +34,6 @@ const SECTIONS: { title: string; fields: FieldDef[] }[] = [
       { key: 'year', label: '형식·연식', kind: 'text' },
       { key: 'mileage', label: '주행거리(km)', kind: 'number' },
       { key: 'weight', label: '차량중량(kg)', kind: 'number' },
-      { key: 'total_weight', label: '차량총중량(kg)', kind: 'number' },
     ],
   },
   {
@@ -92,7 +91,6 @@ export function VehicleForm({
   );
   const touched = useRef<Set<VehicleField>>(new Set());
   const dirty = useRef<Set<VehicleField>>(new Set()); // changed since last save
-  const [showSsn, setShowSsn] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [failCount, setFailCount] = useState(0);
@@ -115,7 +113,7 @@ export function VehicleForm({
     const payload: Record<string, string | null> = {};
     for (const k of keys) {
       const v = (values[k] ?? '').trim();
-      payload[k] = v === '' ? null : k === 'mileage' || k === 'weight' || k === 'total_weight' ? stripCommas(v) : v;
+      payload[k] = v === '' ? null : k === 'mileage' || k === 'weight' ? stripCommas(v) : v;
     }
     dirty.current = new Set();
     inFlight.current = true;
@@ -270,8 +268,6 @@ export function VehicleForm({
                     return ocrKey ? ocrResult.fields[ocrKey] != null && String(ocrResult.fields[ocrKey]).trim() !== '' : false;
                   })();
                 const showAmber = f.important && isEmpty;
-                const masked = f.kind === 'ssn' && !showSsn;
-                const display = masked ? maskSsn(val) : val;
                 return (
                   <div
                     key={f.key}
@@ -282,28 +278,15 @@ export function VehicleForm({
                       <input
                         id={`f-${f.key}`}
                         type="text"
-                        value={display}
+                        value={val}
                         onChange={(e) => {
-                          if (masked) return; // ignore edits while masked — toggle 👁 to edit
                           const raw = f.kind === 'number' ? stripCommas(e.target.value) : e.target.value;
                           setField(f.key, raw, true);
                         }}
                         onBlur={() => debouncedSave.flush()}
-                        readOnly={masked}
                         inputMode={f.kind === 'number' ? 'numeric' : undefined}
                         className="min-w-0 flex-1 rounded bg-transparent px-1 py-1 text-sm text-neutral-100 outline-none focus:bg-neutral-800/60"
                       />
-                      {f.kind === 'ssn' && (
-                        <button
-                          type="button"
-                          onClick={() => setShowSsn((s) => !s)}
-                          className="shrink-0 text-neutral-500 hover:text-neutral-300"
-                          aria-label={showSsn ? '주민등록번호 가리기' : '주민등록번호 보기'}
-                          title={showSsn ? '가리기' : '보기'}
-                        >
-                          {showSsn ? '🙈' : '👁'}
-                        </button>
-                      )}
                       {filledByOcr && (
                         <span className="shrink-0 rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] text-neutral-400">
                           {isTouched ? '수정됨' : '자동 입력'}
@@ -364,5 +347,4 @@ const OCR_KEY_TO_FIELD: Record<keyof OcrFields, VehicleField> = {
   vehicle_year: 'year',
   vehicle_mileage: 'mileage',
   vehicle_weight: 'weight',
-  vehicle_total_weight: 'total_weight',
 };

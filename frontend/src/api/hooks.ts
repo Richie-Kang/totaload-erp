@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { apiGet, apiPatch, apiPostForm, apiPostPdf } from './client';
+import { apiDelete, apiGet, apiPatch, apiPostForm, apiPostPdf } from './client';
 import type {
   UploadResponse,
   VehicleDetail,
@@ -60,5 +60,16 @@ export function useSearch(q: string) {
     queryFn: ({ signal }) =>
       apiGet<VehicleSummary[]>(`/api/malso/search?q=${encodeURIComponent(q)}`, signal),
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useDeleteVehicle() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiDelete(`/api/malso/${id}`),
+    onSuccess: (_v, id) => {
+      qc.removeQueries({ queryKey: ['vehicle', id] });
+      qc.invalidateQueries({ queryKey: ['search'] });
+    },
   });
 }

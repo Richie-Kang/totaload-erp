@@ -23,7 +23,7 @@ OCR_SEMAPHORE = threading.Semaphore(2)
 
 _ALL_KEYS = (
     "owner_name", "owner_ssn", "owner_address", "vehicle_reg_no", "vehicle_vin",
-    "vehicle_model", "vehicle_year", "vehicle_mileage", "vehicle_weight", "vehicle_total_weight",
+    "vehicle_model", "vehicle_year", "vehicle_mileage", "vehicle_weight",
 )
 
 _ERR_MAP = {
@@ -164,8 +164,12 @@ def _parse_and_normalize(obj: dict, raw: str) -> ExtractResponse:
     fields.vehicle_model = _norm_str(obj.get("vehicle_model"))
     fields.vehicle_year = _norm_year(obj.get("vehicle_year"))
     fields.vehicle_mileage = _to_int(obj.get("vehicle_mileage"), warnings, "vehicle_mileage")
-    fields.vehicle_weight = _to_int(obj.get("vehicle_weight"), warnings, "vehicle_weight")
-    fields.vehicle_total_weight = _to_int(obj.get("vehicle_total_weight"), warnings, "vehicle_total_weight")
+    # Codex may still return a legacy "vehicle_total_weight" — prefer that (it's the value we keep
+    # under the new "vehicle_weight" semantics, i.e. total/gross weight).
+    raw_weight = obj.get("vehicle_total_weight")
+    if raw_weight is None or (isinstance(raw_weight, str) and raw_weight.strip() == ""):
+        raw_weight = obj.get("vehicle_weight")
+    fields.vehicle_weight = _to_int(raw_weight, warnings, "vehicle_weight")
 
     for k in obj:
         if k not in _ALL_KEYS:

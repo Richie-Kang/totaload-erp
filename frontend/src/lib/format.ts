@@ -1,15 +1,7 @@
-// Display formatting helpers. See docs/UI_GUIDE.md §4.6 (표기) and §4.3 (SSN 마스킹).
+// Display formatting helpers. See docs/UI_GUIDE.md §4.6 (표기).
 
 export function stripCommas(v: string): string {
   return v.replace(/[,\s]/g, '');
-}
-
-// Mask a Korean SSN: 860101-1234567 -> 860101-*******. Falls back to a generic mask if shape is odd.
-export function maskSsn(v: string | undefined): string {
-  if (!v) return '';
-  const m = v.match(/^(\d{6})[-\s]?(\d{0,7})$/);
-  if (m) return `${m[1]}-${'*'.repeat(Math.max(m[2].length, 7))}`;
-  return v.replace(/\d(?=.{2})/g, '*');
 }
 
 // Date display "YYYY. M. D." from an ISO timestamp.

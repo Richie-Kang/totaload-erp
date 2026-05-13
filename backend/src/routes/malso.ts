@@ -96,6 +96,18 @@ malsoRouter.get('/:id', async (req, res, next) => {
   }
 });
 
+// DELETE /api/malso/:id — remove a vehicle and its attached documents (cascade).
+malsoRouter.delete('/:id', async (req, res, next) => {
+  try {
+    if (!isUuid(req.params.id)) return notFound(res);
+    const removed = await vehicles.deleteById(req.params.id);
+    if (!removed) return notFound(res);
+    res.status(204).end();
+  } catch (e) {
+    next(e);
+  }
+});
+
 malsoRouter.patch('/:id', async (req, res, next) => {
   try {
     if (!isUuid(req.params.id)) return notFound(res);
@@ -141,7 +153,6 @@ malsoRouter.post('/:id/pdf', async (req, res, next) => {
       vehicle_year: v.year,
       vehicle_mileage: v.mileage == null ? null : String(v.mileage),
       vehicle_weight: v.weight == null ? null : String(v.weight),
-      vehicle_total_weight: v.total_weight == null ? null : String(v.total_weight),
       current_date: v.app_date,
     };
 
