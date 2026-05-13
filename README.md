@@ -5,11 +5,26 @@
 
 구성: `frontend/` (React+Vite+TS), `backend/` (Node+Express+TS), `ocr-service/` (Python+FastAPI), `assets/` (PDF 템플릿·샘플), `storage/` (런타임 업로드/생성물, gitignore).
 
-## 로컬 실행
+## 로컬 실행 (Docker)
 
-> TODO(step5): `docker compose up` 한 줄로 postgres + backend + ocr-service + frontend 기동.
+```bash
+cp .env.example .env
+# (선택) OCR 을 쓰려면 호스트에서 먼저 codex 로그인 — ~/.codex/auth.json 생성:
+codex login
+docker compose up --build
+# -> http://localhost:5173   (backend :4000, ocr-service :8000, postgres :5432)
+```
 
-현재(scaffold 단계) 워크스페이스 단위 실행:
+`docker compose up` 이 postgres + ocr-service + backend + frontend 를 고정 포트로 띄운다. backend 는 부팅 시 DB 마이그레이션을 돌린 뒤 listen 한다. frontend(nginx)가 `/api` 를 backend 로 리버스 프록시하므로 브라우저는 `http://localhost:5173` 한 오리진만 본다. `codex login` 을 안 했어도 앱은 동작하고 OCR 만 비활성된다(`GET /api/health` 의 `ocr` 필드로 확인). 호스트에 `~/.codex` 가 없으면 compose 가 빈 디렉터리를 만든다 — OCR 만 비활성될 뿐 문제 없다.
+
+헬스 체크:
+
+```bash
+curl -fsS http://localhost:4000/api/health   # {"status":"ok","db":"ok","ocr":"ok"}
+curl -fsS http://localhost:8000/health        # {"status":"ok","codex":"ok|unauthenticated|missing"}
+```
+
+### Docker 없이 (워크스페이스 단위)
 
 ```bash
 npm install
@@ -18,7 +33,7 @@ npm run lint
 npm run test           # frontend/backend 테스트 + ocr-service pytest
 
 npm run dev -w frontend     # http://localhost:5173 (개발 서버; /api 요청은 BACKEND_URL 또는 :4000 으로 프록시)
-npm run dev -w backend      # http://localhost:4000  (GET /api/health)
+npm run dev -w backend      # http://localhost:4000  (postgres + .env 의 DATABASE_URL 필요)
 cd ocr-service && python3 -m pip install -r requirements.txt && python3 -m uvicorn app.main:app --reload   # http://localhost:8000/health
 ```
 
@@ -37,18 +52,23 @@ backend(+postgres) 와 ocr-service(또는 모킹) 가 떠 있는 상태에서 `n
 7. 상세에서 주민등록번호 칸 마스킹 + 눈 아이콘 토글.
 8. 키보드(Tab/Enter/Esc)만으로 업로드→입력→PDF 생성까지 가능.
 
-## 배포
+## 배포 (Render Blueprint)
 
-> TODO(step5): Render Blueprint(`render.yaml`).
-> 1. `git init` + GitHub 푸시
-> 2. Render 에서 `render.yaml` Blueprint 로 frontend(static) / backend(web + 영구 disk) / ocr-service(web, Docker) / managed PostgreSQL 생성
-> 3. ocr-service 의 `CODEX_AUTH_JSON` 등 env 설정 (로컬 `~/.codex/auth.json` 내용)
+1. **푸시**: `git init && git add -A && git commit -m "init"` → GitHub 에 푸시.
+2. **Blueprint**: Render 대시보드 → New → **Blueprint** → 이 리포 선택 → `render.yaml` 자동 인식 → Apply.
+   - 생성되는 것: `totaload-frontend`(web, Docker — nginx 가 SPA 서빙 + `/api` → backend 프록시), `totaload-backend`(web, Docker — 영구 disk `/data/storage` 1GB), `totaload-ocr`(web, Docker — codex CLI 포함), `totaload-db`(managed PostgreSQL).
+   - 자동 배선되는 env: backend 의 `DATABASE_URL`(← `totaload-db`), `OCR_SERVICE_URL`/`CORS_ORIGIN`(← Render 기본 도메인), frontend 의 `BACKEND_URL`. *Render 가 서비스명에 접미사를 붙이면(이름 충돌) 대시보드에서 `OCR_SERVICE_URL`/`CORS_ORIGIN`/`BACKEND_URL` 을 실제 도메인으로 고쳐라.*
+3. **codex 인증**: 배포 후 `totaload-ocr` 서비스의 환경변수 `CODEX_AUTH_JSON` 에 **로컬 `~/.codex/auth.json` 파일 내용 전체**를 붙여넣고 재배포. (이 값은 Blueprint 에 `sync: false` 라 대시보드에서만 설정한다.) 안 하면 OCR 만 비활성, 나머지는 정상.
 
 ## 보안
 
-> TODO(step5/6 에서 보강):
-> - **주민등록번호(SSN)는 평문 저장**(MVP, 로그인 없음) — 목록/검색 미노출, 상세에서 마스킹+토글. 향후 컬럼 암호화·접근제어 필요.
-> - `CODEX_AUTH_JSON`(ChatGPT 인증), `DATABASE_URL` 은 env 로만. 리포에 커밋 금지.
-> - codex 토큰 만료 시 갱신: 로컬 `codex login` 후 `~/.codex/auth.json` 내용을 다시 `CODEX_AUTH_JSON` 에 설정.
-> - 영구 디스크 미마운트 시 `storage/` 가 재배포마다 사라짐 — Render disk 설정 필수.
-> - DB 백업은 운영 과제(MVP 범위 밖).
+- **주민등록번호(SSN)는 평문 저장**(MVP, 로그인 없음) — 목록/검색에 미노출, 상세 화면에서 마스킹 + 눈 아이콘 토글. 외부 노출에 주의하라; 향후 컬럼 암호화·접근제어가 필요하다.
+- `CODEX_AUTH_JSON` 은 ChatGPT 계정 자격증명이다 — 안전하게 관리하고 리포/`render.yaml`/Dockerfile 에 절대 커밋하지 마라(`sync: false` / env / `.env`). `DATABASE_URL` 도 env(Render `fromDatabase`)로만 주입된다.
+- codex 토큰 만료 시: 로컬에서 `codex login` 으로 `~/.codex/auth.json` 을 갱신 → 그 내용을 `totaload-ocr` 의 `CODEX_AUTH_JSON` 에 다시 설정 → 재배포.
+
+## 운영 메모
+
+- **영구 디스크**: `render.yaml` 의 backend `disk:`(`/data/storage`)가 없으면 업로드 이미지·생성 PDF 가 재배포마다 사라진다 — 유지하라. (free 플랜은 디스크를 못 붙여서 backend 는 `starter` 플랜이다.)
+- **free Postgres 만료**: Render 의 free Postgres(`totaload-db`)는 생성 30일 후 삭제된다. 계속 쓰려면 유료 플랜으로 올려라.
+- **DB / 디스크 백업**: 별도 운영 과제(MVP 범위 밖).
+- **콜드 스타트**: free 플랜 web 서비스(frontend, ocr)는 비활성 시 슬립 → 첫 요청이 느리다. ocr 가 슬립이면 `/api/health` 의 `ocr` 가 잠시 `down`, 첫 업로드가 실패할 수 있다(재시도).

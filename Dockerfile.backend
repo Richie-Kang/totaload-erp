@@ -1,2 +1,26 @@
-# TODO(step5): Node image, install workspace deps, `npm run build -w backend`, run `node dist/index.js`.
-# Skeleton only — see docs/ARCHITECTURE.md §2.1–2.2 and the step5 plan.
+# Backend API (Node/Express). Runs DB migrations on boot, then listens.
+# STORAGE_DIR must point at the mounted persistent disk (see render.yaml / ADR-006).
+
+# --- build stage ---
+FROM node:20-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY frontend/package.json ./frontend/package.json
+COPY backend/package.json ./backend/package.json
+RUN npm ci
+COPY backend ./backend
+RUN npm -w backend run build
+
+# --- runtime stage ---
+FROM node:20-slim
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package.json package-lock.json ./
+COPY frontend/package.json ./frontend/package.json
+COPY backend/package.json ./backend/package.json
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /app/backend/dist ./backend/dist
+ENV STORAGE_DIR=/data/storage
+ENV PORT=4000
+EXPOSE 4000
+CMD ["node", "backend/dist/index.js"]

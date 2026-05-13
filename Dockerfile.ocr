@@ -1,3 +1,30 @@
-# TODO(step5): Python image, install requirements.txt, install the `codex` CLI,
-# entrypoint writes $CODEX_AUTH_JSON to ~/.codex/auth.json, then `uvicorn app.main:app`.
-# Skeleton only — see docs/ARCHITECTURE.md §2.6 and docs/ADR.md ADR-008.
+# OCR/PDF service (Python/FastAPI). Calls the `codex` CLI for multimodal OCR (ADR-002),
+# so the image installs Node + the codex CLI. If that install fails the build fails —
+# codex is a hard dependency of this service.
+
+FROM python:3.12-slim
+
+# Node.js 20 (via NodeSource) + the codex CLI.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+ && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && npm install -g @openai/codex \
+ && apt-get purge -y --auto-remove gnupg \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY ocr-service/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ocr-service/ ./
+COPY assets/ ./assets/
+COPY deploy/ocr-entrypoint.sh /usr/local/bin/ocr-entrypoint.sh
+RUN chmod +x /usr/local/bin/ocr-entrypoint.sh
+
+ENV TEMPLATE_PATH=/app/assets/malso_application_template.pdf
+ENV PORT=8000
+EXPOSE 8000
+
+ENTRYPOINT ["/usr/local/bin/ocr-entrypoint.sh"]

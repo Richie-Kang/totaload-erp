@@ -1,3 +1,73 @@
-# TODO(step5): local dev stack — postgres, backend, ocr-service, frontend.
-# Mount the host ~/.codex into the ocr-service container read-only (see docs/ADR.md ADR-008).
-# Skeleton only — see docs/ARCHITECTURE.md §2.1 and the step5 plan.
+# Local dev stack: postgres + ocr-service + backend + frontend, fixed ports.
+#   docker compose up --build   ->   http://localhost:5173
+#
+# codex auth for local OCR (optional): run `codex login` on the host first so
+# ~/.codex/auth.json exists — it's mounted read-only into the ocr container below.
+# Without it the app still works; only OCR is disabled.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: totaload
+      POSTGRES_PASSWORD: totaload
+      POSTGRES_DB: totaload
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U totaload -d totaload"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ocr:
+    build:
+      context: .
+      dockerfile: Dockerfile.ocr
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: 8000
+      TEMPLATE_PATH: /app/assets/malso_application_template.pdf
+      # Passed through from the host shell if set; otherwise the mount below is used.
+      CODEX_AUTH_JSON: ${CODEX_AUTH_JSON:-}
+    volumes:
+      - ${HOME}/.codex:/root/.codex:ro
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://totaload:totaload@postgres:5432/totaload
+      OCR_SERVICE_URL: http://ocr:8000
+      CORS_ORIGIN: http://localhost:5173
+      STORAGE_DIR: /data/storage
+    volumes:
+      - storage:/data/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ocr:
+        condition: service_started
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "5173:80"
+    environment:
+      PORT: 80
+      BACKEND_URL: http://backend:4000
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  storage:
