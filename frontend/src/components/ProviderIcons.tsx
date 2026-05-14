@@ -15,7 +15,7 @@ export function UpstageIcon({ className = 'h-4 w-4' }: { className?: string }) {
 export function CodexIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
     <img
-      src="/codex-logo.jpeg"
+      src="/codex-logo.png"
       alt="Codex"
       className={className}
       style={{ objectFit: 'contain' }}
