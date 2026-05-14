@@ -17,7 +17,7 @@ export function SidebarLayout() {
         </div>
         <nav className="space-y-1.5">
           <NavLink to="/malso/new" className={({ isActive }) => linkClass(isActive)}>
-            <SvgInput active />
+            <SvgInput />
             <span className="flex-1">
               <span className="font-medium">Deregistration Input</span>
               <span className="block text-xs opacity-80">말소 입력</span>
@@ -46,10 +46,9 @@ export function SidebarLayout() {
   );
 }
 
-function SvgInput({ active }: { active?: boolean }) {
-  const stroke = active ? 'white' : 'currentColor';
+function SvgInput() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke={stroke} strokeWidth="1.6">
+    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.6">
       <path d="M5 5h11l3 3v11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" strokeLinejoin="round" />
       <path d="M8 12h8M8 16h5" strokeLinecap="round" />
     </svg>
