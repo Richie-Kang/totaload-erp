@@ -5,7 +5,7 @@ import * as ocr from './services/ocr.js';
 import { malsoRouter } from './routes/malso.js';
 import { filesRouter } from './routes/files.js';
 
-// Totaload ERP — Node API. Routes for the malso flow + file serving; OCR is reached only via services/ocr.
+// Hanaru AI ERP — Node API. Routes for the malso flow + file serving; OCR is reached only via services/ocr.
 export const app = express();
 
 // CORS — only the configured frontend origin is allowed (PRD §7). No `cors` dependency: a few headers.

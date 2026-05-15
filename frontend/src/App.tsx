@@ -4,7 +4,7 @@ import { SidebarLayout } from './components/SidebarLayout';
 import { MalsoInputPage } from './pages/MalsoInputPage';
 import { MalsoSearchPage } from './pages/MalsoSearchPage';
 
-// Totaload ERP — routes. See docs/UI_GUIDE.md §4.2.
+// Hanaru AI ERP — routes. See docs/UI_GUIDE.md §4.2.
 export function App() {
   // Render free-plan services sleep after ~15 min idle. Hitting /api/health on app
   // mount wakes the backend, which in turn pings ocr-service, so the entire chain

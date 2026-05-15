@@ -1,4 +1,4 @@
-// Totaload ERP — date helpers. app_date / PDF current_date use the `YYYY년 M월 D일` form (PRD §4).
+// Hanaru AI ERP — date helpers. app_date / PDF current_date use the `YYYY년 M월 D일` form (PRD §4).
 
 export function todayKr(d = new Date()): string {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;

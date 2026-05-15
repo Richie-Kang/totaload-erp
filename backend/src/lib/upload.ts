@@ -1,4 +1,4 @@
-// Totaload ERP — upload file-type detection by magic bytes (docs/ARCHITECTURE.md §2.8, PRD §7).
+// Hanaru AI ERP — upload file-type detection by magic bytes (docs/ARCHITECTURE.md §2.8, PRD §7).
 // Only JPEG / PNG / WebP / PDF are accepted; the declared mimetype alone is never trusted.
 
 export const ALLOWED_UPLOAD_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf']);

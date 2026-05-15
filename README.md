@@ -1,4 +1,4 @@
-# Totaload — Used-Car Export ERP
+# Hanaru AI ERP — Used-Car Export ERP
 
 A working MVP for **TRYNIC**, a Korean used-car exporter. Drop a photo of a Korean vehicle
 registration certificate (자동차등록증) and the app fills the **mandatory deregistration form

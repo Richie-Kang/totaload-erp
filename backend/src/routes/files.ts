@@ -1,4 +1,4 @@
-// Totaload ERP — GET /api/files/:docId: stream a stored document by id only (PRD §7, §2.8).
+// Hanaru AI ERP — GET /api/files/:docId: stream a stored document by id only (PRD §7, §2.8).
 // File bytes live in Postgres (documents.file_bytes); fetched only on download.
 
 import { Router } from 'express';

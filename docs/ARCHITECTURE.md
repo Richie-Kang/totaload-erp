@@ -1,4 +1,4 @@
-# 아키텍처 — Totaload ERP
+# 아키텍처 — Hanaru AI ERP
 
 > 이 문서는 `phases/0-mvp/step0` 에서 마스터 계획서 2절(2.1~2.8)을 옮겨 작성했다. 이후 모든 step 의 가드레일로 주입된다. step 파일은 이 구조에서 벗어나면 안 된다.
 

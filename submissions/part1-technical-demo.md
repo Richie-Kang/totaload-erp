@@ -8,7 +8,7 @@
 
 ## TL;DR
 
-I built **Totaload OCR**, a working web app that uses an **Upstage Document Parse → Solar Chat** pipeline to extract structured data from a real-world Korean enterprise document — the **vehicle registration certificate (자동차등록증)** — and auto-fills the corresponding **government deregistration application (말소등록 신청서)** PDF. The same image is also processed by **OpenAI Codex (CLI vision)** and **Google Gemini 2.5 Flash** through the same UI for direct comparison.
+I built **Hanaru AI ERP**, a working web app that uses an **Upstage Document Parse → Solar Chat** pipeline to extract structured data from a real-world Korean enterprise document — the **vehicle registration certificate (자동차등록증)** — and auto-fills the corresponding **government deregistration application (말소등록 신청서)** PDF. The same image is also processed by **OpenAI Codex (CLI vision)** and **Google Gemini 2.5 Flash** through the same UI for direct comparison.
 
 The product target is the operator at a Korean used-car exporter who, today, hand-keys 12 fields from a paper cert into a PDF form, dozens of times per day. The Upstage pipeline cuts that to a 4-second auto-fill plus a review pass.
 
@@ -20,7 +20,7 @@ The product target is the operator at a Korean used-car exporter who, today, han
 
 **One product improvement I'd ship:** a unified `schema_extract` endpoint that takes an image plus a user-defined JSON schema and returns the populated, layout-grounded object in one call — replacing the current `Document Parse → Solar Chat` two-step. Reasoning in §4.
 
-![Totaload OCR — three OCR providers from one upload screen](https://github.com/Richie-Kang/totaload-erp/raw/main/assets/screenshots/01-hero.png)
+![Hanaru AI ERP — three OCR providers from one upload screen](https://github.com/Richie-Kang/totaload-erp/raw/main/assets/screenshots/01-hero.png)
 
 *The deployed app. The operator drops a registration certificate onto the dropzone; the OCR engine is chosen from the segmented control in the top-right (Upstage is the default and listed first). Everything else — the form schema, the downstream PDF — is identical across the three providers, so the only variable in the comparison is the OCR engine.*
 
@@ -124,7 +124,7 @@ The first request after a 15-minute idle period takes 30–60 s while three Rend
 **Issue 4 — PII handling is on the application, not the provider.**
 The resident-registration number Upstage extracts is the actual national-ID equivalent. Treating that responsibly is a downstream concern (encryption-at-rest, access logs, never appearing in search responses). Not a Document Parse issue — but worth flagging because the assignment specifically called out masking.
 
-*Fix on the application side.* In Totaload OCR, `owner_ssn` is **never returned by `GET /api/malso/search`** (verified by `backend/test/api.test.ts::owner_ssn never in search results`); the detail view shows it only on the explicit form. The PDF that gets printed uses the plaintext value because the government form requires it. This is the smallest blast-radius design.
+*Fix on the application side.* In Hanaru AI ERP, `owner_ssn` is **never returned by `GET /api/malso/search`** (verified by `backend/test/api.test.ts::owner_ssn never in search results`); the detail view shows it only on the explicit form. The PDF that gets printed uses the plaintext value because the government form requires it. This is the smallest blast-radius design.
 
 ---
 

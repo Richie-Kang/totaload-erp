@@ -28,7 +28,7 @@
    - `backend` — build `Dockerfile.backend`(또는 dev), 포트 `4000:4000`, env `DATABASE_URL`(→postgres), `OCR_SERVICE_URL=http://ocr:8000`, `CORS_ORIGIN=http://localhost:5173`, `STORAGE_DIR`(볼륨), `depends_on: [postgres, ocr]`.
    - `frontend` — dev: node 이미지 + 볼륨 + `npm -w frontend run dev -- --host`, 포트 `5173:5173`, `VITE_API_BASE=http://localhost:4000`. (또는 build + serve.)
 6. **`README.md`** 마무리:
-   - 개요(Totaload ERP, 말소 입력/검색).
+   - 개요(Hanaru AI ERP, 말소 입력/검색).
    - 로컬 실행: `cp .env.example .env` → (codex 로컬 인증: `codex login` 으로 호스트 `~/.codex/auth.json` 생성 — OCR 쓰려면 필요, 없어도 앱은 동작하고 OCR 만 비활성) → `docker compose up --build` → `http://localhost:5173`.
    - 배포(Render): ① `git init && git add -A && git commit -m ...` 후 GitHub 에 푸시 → ② Render 대시보드 → New → **Blueprint** → 이 리포 선택(`render.yaml` 자동 인식) → Apply → ③ 배포 후 `totaload-ocr` 서비스의 `CODEX_AUTH_JSON` 환경변수에 **로컬 `~/.codex/auth.json` 파일 내용 전체**를 붙여넣고 재배포. (DATABASE_URL·OCR_SERVICE_URL·CORS_ORIGIN 은 Blueprint 가 자동 배선.)
    - 보안 경고: 주민등록번호가 평문 저장됨(로그인 없는 MVP) — 외부 노출 주의; `CODEX_AUTH_JSON` 은 ChatGPT 계정 자격증명이니 안전히 관리, 토큰 만료 시 `~/.codex` 재로그인 후 env 갱신.

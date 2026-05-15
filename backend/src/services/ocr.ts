@@ -1,4 +1,4 @@
-// Totaload ERP — client for the Python OCR/PDF service. The frontend never calls ocr-service directly;
+// Hanaru AI ERP — client for the Python OCR/PDF service. The frontend never calls ocr-service directly;
 // everything goes through here (docs/ARCHITECTURE.md §2.1, §2.3, §2.5).
 
 const OCR_SERVICE_URL = (process.env.OCR_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
@@ -64,10 +64,14 @@ export async function extract(
     const form = new FormData();
     form.append('file', new Blob([new Uint8Array(buf)]), filename || 'upload');
     form.append('provider', provider);
+    // 45s — must stay below Render's edge response timeout (~60s) so the backend always
+    // returns a 201 in time. If ocr-service is still cold and misses the window, the
+    // upload still succeeds with an empty form; the user can hit "다시 분석" to retry
+    // against a warm ocr-service.
     const res = await fetch(`${OCR_SERVICE_URL}/extract`, {
       method: 'POST',
       body: form,
-      signal: AbortSignal.timeout(95_000),
+      signal: AbortSignal.timeout(45_000),
     });
     if (!res.ok) return failedResult('ocr-service 응답 없음', 'OCR_UNAVAILABLE', provider);
     const data = (await res.json()) as {

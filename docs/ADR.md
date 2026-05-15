@@ -1,4 +1,4 @@
-# Architecture Decision Records — Totaload ERP
+# Architecture Decision Records — Hanaru AI ERP
 
 > 이 문서는 `phases/0-mvp/step0` 에서 마스터 계획서 3절을 옮겨 작성했다. 이후 모든 step 의 가드레일로 주입된다.
 

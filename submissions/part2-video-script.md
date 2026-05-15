@@ -10,7 +10,7 @@ Stage directions are in `[brackets]`. Spoken lines are what you read.
 
 ### [0:00 – 0:20] Open · the problem
 
-`[Tab 1: Totaload OCR — sidebar visible. Drag the sample certificate over the dropzone, don't drop yet.]`
+`[Tab 1: Hanaru AI ERP — sidebar visible. Drag the sample certificate over the dropzone, don't drop yet.]`
 
 > **"Hi. I'd like to show you how I picked the best OCR for a real customer — a Korean used-car export company. Every day, a worker types twelve fields from a paper registration into a government form. About thirty cars a day. We need an OCR that finishes in under ten seconds, every time. I tested three: Upstage, OpenAI Codex, and Google Gemini."**
 
@@ -20,7 +20,7 @@ Stage directions are in `[brackets]`. Spoken lines are what you read.
 
 `[Hover over the OCR-engine selector in the top-right. Show all three logos.]`
 
-> **"This is Totaload OCR. The same upload can run through any of the three engines. Same image, same form. The only thing changing is the OCR engine."**
+> **"This is Hanaru AI ERP. The same upload can run through any of the three engines. Same image, same form. The only thing changing is the OCR engine."**
 
 ---
 

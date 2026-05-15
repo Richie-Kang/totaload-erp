@@ -13,7 +13,7 @@
 
 ## 배경 (이 phase 가 만드는 것)
 
-중고차 수출 회사 트리닉의 사내 ERP "Totaload" MVP. 핵심 기능 2개: **말소 입력**(자동차등록증 이미지 업로드 → OCR 로 정보 추출 → 말소등록 신청서 PDF 의 폼필드 12개 채움 → 사용자가 검수·수정 → PDF 생성/인쇄), **말소 검색**(차량번호/차대번호 일부로 차량·서류 검색). 사이드바 2항목. 로그인 없음. 스택: React(frontend) / Node.js(backend) / Python(ocr-service) / PostgreSQL. OCR 은 ocr-service 가 로컬 `codex` CLI 를 호출해 수행. 배포는 Render Blueprint. 진행은 harness(이 phase, step0~6).
+중고차 수출 회사 트리닉의 사내 ERP "Hanaru AI ERP" MVP. 핵심 기능 2개: **말소 입력**(자동차등록증 이미지 업로드 → OCR 로 정보 추출 → 말소등록 신청서 PDF 의 폼필드 12개 채움 → 사용자가 검수·수정 → PDF 생성/인쇄), **말소 검색**(차량번호/차대번호 일부로 차량·서류 검색). 사이드바 2항목. 로그인 없음. 스택: React(frontend) / Node.js(backend) / Python(ocr-service) / PostgreSQL. OCR 은 ocr-service 가 로컬 `codex` CLI 를 호출해 수행. 배포는 Render Blueprint. 진행은 harness(이 phase, step0~6).
 
 ## 작업
 

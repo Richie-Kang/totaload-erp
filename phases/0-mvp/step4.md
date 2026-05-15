@@ -14,7 +14,7 @@
 `docs/UI_GUIDE.md` 의 UX 설계를 그대로 구현한다. React + TS + Tailwind + react-router. 서버 상태는 TanStack Query(react-query) 권장(없이 fetch+state 도 가능하나 캐시/로딩 처리가 손이 더 감).
 
 ### 라우팅 & 레이아웃
-- `SidebarLayout`: 좌측 고정 사이드바(폭 ~220px) — 상단 "Totaload", 메뉴 2개 **말소 입력**(→`/malso/new`)·**말소 검색**(→`/malso/search`), 현재 위치 active. 우측 `<Outlet/>`.
+- `SidebarLayout`: 좌측 고정 사이드바(폭 ~220px) — 상단 "Hanaru AI ERP", 메뉴 2개 **말소 입력**(→`/malso/new`)·**말소 검색**(→`/malso/search`), 현재 위치 active. 우측 `<Outlet/>`.
 - 라우트: `/` → redirect `/malso/new`; `/malso/new` = `MalsoInputPage`(상태 A); `/malso/:id` = `MalsoInputPage`(상태 C, 또는 검색 진입 시 = 상세); `/malso/search` = `MalsoSearchPage`.
 
 ### 공통 컴포넌트 (`src/components/`)

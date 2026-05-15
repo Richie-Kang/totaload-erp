@@ -1,4 +1,4 @@
-// Totaload ERP — vehicles + documents data access (pg, no ORM). See docs/ARCHITECTURE.md §2.3, §2.4, §2.8.
+// Hanaru AI ERP — vehicles + documents data access (pg, no ORM). See docs/ARCHITECTURE.md §2.3, §2.4, §2.8.
 
 import { query } from '../db/pool.js';
 import { todayKr } from '../lib/dates.js';

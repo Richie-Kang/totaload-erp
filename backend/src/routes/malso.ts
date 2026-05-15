@@ -1,4 +1,4 @@
-// Totaload ERP — /api/malso routes: upload+extract, fetch, edit, PDF generation, search (§2.3, §2.5).
+// Hanaru AI ERP — /api/malso routes: upload+extract, fetch, edit, PDF generation, search (§2.3, §2.5).
 
 import { Router, type Response } from 'express';
 import multer from 'multer';

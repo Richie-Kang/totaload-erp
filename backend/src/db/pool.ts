@@ -1,6 +1,6 @@
 import pg from 'pg';
 
-// Totaload ERP — PostgreSQL connection pool (pg, no ORM). See docs/ARCHITECTURE.md §2.4, §2.7.
+// Hanaru AI ERP — PostgreSQL connection pool (pg, no ORM). See docs/ARCHITECTURE.md §2.4, §2.7.
 // DATABASE_URL is required for the backend to function; absence surfaces as connection errors
 // (db:'down' in /api/health, migration failure on boot) rather than a module-load crash.
 
